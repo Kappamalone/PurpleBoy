@@ -36,13 +36,13 @@ with open("baseInstructions.go","w+") as file:
 
 starterLines = [
     "package main\n"
-    "func (cpu *gameboyCPU) decodeAndExecute(opcode){",
+    "func (cpu *gameboyCPU) decodeAndExecute(opcode uint8)(int,string){",
     "var cycles int",
     "var instruction string",
     "switch opcode{"
 ]
 
-endLines = ["}","}"]
+endLines = ["}","return cycles,instruction","}"]
 
 def writeLine(line):
     with open("baseInstructions.go","a") as file:
@@ -69,7 +69,7 @@ with open('GB_Opcodes.csv','r') as file:
 
             if seperationCounter % 16 == 0:
                  writeLine('\n')
-                 writeLine(f'//Row {seperationTag+1}: 0x{format(seperationTag,"02X")}')
+                 writeLine(f'//-----------Row {seperationTag+1}: 0x{format(seperationTag,"01X")}-----------')
                  seperationTag += 1
             
             writeLine(f'case 0x{hexvalue}:')
@@ -80,7 +80,7 @@ with open('GB_Opcodes.csv','r') as file:
                 elif z == '0':
                     writeLine(f'cpu.setFlag("Z",0)')
                 else:
-                    writeLine(f'cpu.zflag()')
+                    writeLine(f'\t\t//cpu.zflag()')
             
             if n != '-':
                 if n == '1':
@@ -105,10 +105,10 @@ with open('GB_Opcodes.csv','r') as file:
                     writeLine(f'\t\t//cpu.cflag( , ,"{mnemonic}")')
 
             writeLine(f'//{mnemonic}()')
-            if byteSize == 2:
-                writeLine(f'cpu.pc++')
-            elif byteSize == 3:
-                writeLine(f'cpu.pc += 2')
+            if int(byteSize) == 2:
+                writeLine(f'cpu.PC++')
+            elif int(byteSize) == 3:
+                writeLine(f'cpu.PC += 2')
             
             if "/" not in cycles:
                 writeLine(f'cycles = {cycles}')

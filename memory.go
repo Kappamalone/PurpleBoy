@@ -1,11 +1,23 @@
 package main
 
-type memory struct {
-	ram [16 * 1024]uint8
+import (
+	"io/ioutil"
+)
+
+func checkErr(errormsg string,err error){
+	if err != nil {
+		panic(errormsg)
+	}
 }
 
-func initMemory() *memory {
+type memory struct {
+	gameboy *gameboyCPU
+	ram [1024 * 64]uint8
+}
+
+func initMemory(gb *gameboyCPU) *memory {
 	mem := new(memory)
+	mem.gameboy = gb
 	return mem
 }
 
@@ -15,4 +27,14 @@ func (mem *memory) write(addr uint16, data uint8) {
 
 func (mem *memory) read(addr uint16) uint8 {
 	return mem.ram[addr]
+}
+
+func (mem *memory) loadBootrom(path string){
+	file,err := ioutil.ReadFile(path)
+	checkErr("Could not find bootrom!",err)
+
+	for i := 0; i < len(file);i++{
+		mem.ram[i] = file[i]
+	}
+	
 }
