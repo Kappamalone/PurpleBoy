@@ -21,11 +21,17 @@ func initMemory(gb *gameboy) *memory {
 	return mem
 }
 
-func (mem *memory) write(addr uint16, data uint8) {
+func (mem *memory) writebyte(addr uint16, data uint8) {
 	mem.ram[addr] = data
 }
 
-func (mem *memory) read(addr uint16) uint8 {
+func (mem *memory) writeword(addr uint16, data uint16) {
+	//Account for low endian and store lsb first
+	mem.ram[addr] = uint8(data) & 0xFF
+	mem.ram[addr+1] = uint8(uint16(data) >> 8)
+}
+
+func (mem *memory) readbyte(addr uint16) uint8 {
 	return mem.ram[addr]
 }
 

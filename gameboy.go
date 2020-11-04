@@ -1,10 +1,10 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	ui "github.com/gizak/termui/v3"
-	"os"
-	"strconv"
+	// "os"
+	// "strconv"
 )
 
 type gameboy struct {
@@ -29,10 +29,9 @@ func main() {
 	gb := initGameboy(true)
 	gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 
-	cycles, _ := strconv.Atoi(os.Args[1])
-	for i := 0; i < cycles; i++ {
-		gb.cpu.cycle()
-	}
+	a := 0x0000
+	b := 0x0
+	fmt.Println(uint32(a)-uint32(b) > 0xFFFF)
 
 	for {
 		handleInput()
