@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	ui "github.com/gizak/termui/v3"
+	//"fmt"
 	// "os"
 	// "strconv"
 )
@@ -25,13 +24,8 @@ func initGameboy(isDebugging bool) *gameboy {
 }
 
 func main() {
-	defer ui.Close() //close termui
 	gb := initGameboy(true)
-	gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
-
-	a := 0x0000
-	b := 0x0
-	fmt.Println(uint32(a)-uint32(b) > 0xFFFF)
+	gb.mmu.loadBlaarg("roms/testroms/cpu_instrs/cpu_instrs.gb")
 
 	for {
 		handleInput()

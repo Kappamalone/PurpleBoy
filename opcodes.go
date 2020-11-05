@@ -1,8 +1,33 @@
 package main
 
 import (
-//"fmt"
+	//"fmt"
+	"strings"
 )
+
+func opcodePattern(pattern string,opcode uint8) bool {
+	//Takes an input in the form of a string such as 
+	//"11220011" and return true if the opcode matches 
+	//the pattern (2 are ignored bits)
+
+	patternArray := strings.Split(pattern," ")
+	match := true
+	for i := 0; i < 8; i++ {
+		if patternArray[i] != "n"{
+			if patternArray[i] == "1"{
+				if (opcode >> (7-i)) == 0{
+					match = false
+				}
+			} else if patternArray[i] == "0"{
+				if (opcode >> (7-i)) == 1 {
+					match = false
+				}
+			}
+		}
+	}
+
+	return match
+}
 
 func (cpu *gameboyCPU) setFlag(flag string, value bool) {
 	switch flag {
@@ -125,6 +150,7 @@ func (cpu *gameboyCPU) d16() uint16 {
 //Wonderful explanation for half carry flags at https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 
 func (cpu *gameboyCPU) INCR8(opcode uint8) {
+	opcode &= 0x7
 	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(1)&0x10 == 0x10))
 
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + 1)
@@ -134,6 +160,7 @@ func (cpu *gameboyCPU) INCR8(opcode uint8) {
 }
 
 func (cpu *gameboyCPU) DECR8(opcode uint8) {
+	opcode &= 0x07
 	//REMEMBER H flag
 
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() - 1)
@@ -143,6 +170,7 @@ func (cpu *gameboyCPU) DECR8(opcode uint8) {
 }
 
 func (cpu *gameboyCPU) ADDR8(opcode uint8, value uint8) {
+	opcode &= 0x07
 	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(value&0x0F)&0x10 == 0x10))
 	cpu.setFlag("C", uint32(cpu.r8Read[opcode]())+uint32(value) > 0xFFFF)
 
@@ -153,6 +181,7 @@ func (cpu *gameboyCPU) ADDR8(opcode uint8, value uint8) {
 }
 
 func (cpu *gameboyCPU) SUBR8(opcode uint8, value uint8) {
+	opcode &= 0x07
 	//REMEMBER H flag
 	
 	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(value) > 0xFFFF))
