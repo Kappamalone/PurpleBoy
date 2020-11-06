@@ -26,7 +26,6 @@ func initGameboy(isDebugging bool) *gameboy {
 func main() {
 	gb := initGameboy(true)
 	gb.mmu.loadBlaarg("roms/testroms/cpu_instrs/cpu_instrs.gb")
-
 	for {
 		handleInput()
 	}

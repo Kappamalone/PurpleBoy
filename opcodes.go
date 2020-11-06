@@ -2,24 +2,23 @@ package main
 
 import (
 	//"fmt"
-	"strings"
+	//"strings"
 )
 
-func opcodePattern(pattern string,opcode uint8) bool {
+func opcodeFormat(patternArray [8]uint8,opcode uint8) bool {
 	//Takes an input in the form of a string such as 
 	//"11220011" and return true if the opcode matches 
 	//the pattern (2 are ignored bits)
 
-	patternArray := strings.Split(pattern," ")
 	match := true
 	for i := 0; i < 8; i++ {
-		if patternArray[i] != "n"{
-			if patternArray[i] == "1"{
-				if (opcode >> (7-i)) == 0{
+		if patternArray[i] != 2{
+			if patternArray[i] == 1{
+				if (opcode & (1<<(7-i))) == 0{ //Checks if (7-ith) bit is not set
 					match = false
 				}
-			} else if patternArray[i] == "0"{
-				if (opcode >> (7-i)) == 1 {
+			} else if patternArray[i] == 0{
+				if (opcode & (1<<(7-i))) > 0{ //Checks if (7-ith) bit is not set
 					match = false
 				}
 			}
@@ -58,77 +57,27 @@ func (cpu *gameboyCPU) setFlag(flag string, value bool) {
 	}
 }
 
-func (cpu *gameboyCPU) getFlag(flag string) uint16 {
-	var flagbit uint16
+func (cpu *gameboyCPU) getFlag(flag string) bool {
+	flagSet := false
 	switch flag {
 	case "Z":
-		flagbit = (cpu.AF >> 7) & 1
+		if (cpu.AF >> 7) & 1 == 1{
+			flagSet = true
+		}
 	case "N":
-		flagbit = (cpu.AF >> 6) & 1
+		if (cpu.AF >> 6) & 1 == 1{
+			flagSet = true
+		}
 	case "H":
-		flagbit = (cpu.AF >> 5) & 1
+		if (cpu.AF >> 5) & 1 == 1{
+			flagSet = true
+		}
 	case "C":
-		flagbit = (cpu.AF >> 4) & 1
+		if (cpu.AF >> 4) & 1 == 1{
+			flagSet = true
+		}
 	}
-	return flagbit
-}
-
-//Get 8 bit registers
-func (cpu *gameboyCPU) A() uint8 {
-	return uint8(cpu.AF >> 8)
-}
-
-func (cpu *gameboyCPU) B() uint8 {
-	return uint8(cpu.BC >> 8)
-}
-
-func (cpu *gameboyCPU) C() uint8 {
-	return uint8(cpu.BC & 0xFF)
-}
-
-func (cpu *gameboyCPU) D() uint8 {
-	return uint8(cpu.DE >> 8)
-}
-
-func (cpu *gameboyCPU) E() uint8 {
-	return uint8(cpu.DE & 0xFF)
-}
-
-func (cpu *gameboyCPU) H() uint8 {
-	return uint8(cpu.HL >> 8)
-}
-
-func (cpu *gameboyCPU) L() uint8 {
-	return uint8(cpu.HL & 0xFF)
-}
-
-//Set 8 bit registers
-func (cpu *gameboyCPU) setA(data uint8) {
-	cpu.AF = uint16(data)<<8 | cpu.AF&0xFF
-}
-
-func (cpu *gameboyCPU) setB(data uint8) {
-	cpu.BC = uint16(data)<<8 | cpu.BC&0xFF
-}
-
-func (cpu *gameboyCPU) setC(data uint8) {
-	cpu.BC = cpu.BC<<8 | uint16(data)
-}
-
-func (cpu *gameboyCPU) setD(data uint8) {
-	cpu.DE = uint16(data)<<8 | cpu.DE&0xFF
-}
-
-func (cpu *gameboyCPU) setE(data uint8) {
-	cpu.DE = cpu.DE<<8 | uint16(data)
-}
-
-func (cpu *gameboyCPU) setH(data uint8) {
-	cpu.HL = uint16(data)<<8 | cpu.HL&0xFF
-}
-
-func (cpu *gameboyCPU) setL(data uint8) {
-	cpu.HL = cpu.HL<<8 | uint16(data)
+	return flagSet
 }
 
 //Addressing modes
