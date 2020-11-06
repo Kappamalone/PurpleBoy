@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 )
 
-func checkErr(err error,errormsg string) {
+func checkErr(err error, errormsg string) {
 	if err != nil {
 		panic(errormsg)
 	}
@@ -45,20 +45,20 @@ func (mem *memory) loadBootrom(path string) {
 
 }
 
-func (mem *memory) loadBlaarg(path string){
+func (mem *memory) loadBlaarg(path string) {
 	file, err := ioutil.ReadFile(path)
-	checkErr(err,"Could not find rom specified!")
+	checkErr(err, "Could not find rom specified!")
 
-	for i :=0; i < len(file); i++{
+	for i := 0; i < len(file); i++ {
 		mem.ram[i] = file[i]
 	}
 }
 
 func (mem *memory) loadRom(path string) {
 	file, err := ioutil.ReadFile(path)
-	checkErr(err,"Could not find rom specified!")
+	checkErr(err, "Could not find rom specified!")
 
-	for i :=0; i < len(file); i++{
+	for i := 0; i < len(file); i++ {
 		mem.ram[0x100+i] = file[i]
 	}
 }

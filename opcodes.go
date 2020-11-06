@@ -1,24 +1,24 @@
 package main
 
 import (
-	//"fmt"
-	//"strings"
+//"fmt"
+//"strings"
 )
 
-func opcodeFormat(patternArray [8]uint8,opcode uint8) bool {
-	//Takes an input in the form of a string such as 
-	//"11220011" and return true if the opcode matches 
+func opcodeFormat(patternArray [8]uint8, opcode uint8) bool {
+	//Takes an input in the form of a string such as
+	//"11220011" and return true if the opcode matches
 	//the pattern (2 are ignored bits)
 
 	match := true
 	for i := 0; i < 8; i++ {
-		if patternArray[i] != 2{
-			if patternArray[i] == 1{
-				if (opcode & (1<<(7-i))) == 0{ //Checks if (7-ith) bit is not set
+		if patternArray[i] != 2 {
+			if patternArray[i] == 1 {
+				if (opcode & (1 << (7 - i))) == 0 { //Checks if (7-ith) bit is not set
 					match = false
 				}
-			} else if patternArray[i] == 0{
-				if (opcode & (1<<(7-i))) > 0{ //Checks if (7-ith) bit is not set
+			} else if patternArray[i] == 0 {
+				if (opcode & (1 << (7 - i))) > 0 { //Checks if (7-ith) bit is not set
 					match = false
 				}
 			}
@@ -28,28 +28,28 @@ func opcodeFormat(patternArray [8]uint8,opcode uint8) bool {
 	return match
 }
 
-func (cpu *gameboyCPU) setFlag(flag string, value bool) {
+func (cpu *gameboyCPU) setFlag(flag string, operand bool) {
 	switch flag {
 	case "Z":
-		if value {
+		if operand {
 			cpu.AF |= 128
 		} else {
 			cpu.AF &^= 128
 		}
 	case "N":
-		if value {
+		if operand {
 			cpu.AF |= 64
 		} else {
 			cpu.AF &^= 64
 		}
 	case "H":
-		if value {
+		if operand {
 			cpu.AF |= 32
 		} else {
 			cpu.AF &^= 32
 		}
 	case "C":
-		if value {
+		if operand {
 			cpu.AF |= 16
 		} else {
 			cpu.AF &^= 16
@@ -61,23 +61,31 @@ func (cpu *gameboyCPU) getFlag(flag string) bool {
 	flagSet := false
 	switch flag {
 	case "Z":
-		if (cpu.AF >> 7) & 1 == 1{
+		if (cpu.AF>>7)&1 == 1 {
 			flagSet = true
 		}
 	case "N":
-		if (cpu.AF >> 6) & 1 == 1{
+		if (cpu.AF>>6)&1 == 1 {
 			flagSet = true
 		}
 	case "H":
-		if (cpu.AF >> 5) & 1 == 1{
+		if (cpu.AF>>5)&1 == 1 {
 			flagSet = true
 		}
 	case "C":
-		if (cpu.AF >> 4) & 1 == 1{
+		if (cpu.AF>>4)&1 == 1 {
 			flagSet = true
 		}
 	}
 	return flagSet
+}
+
+func (cpu *gameboyCPU) carry() uint8 {
+	if cpu.getFlag("Z") {
+		return uint8(1)
+	} else {
+		return uint8(0)
+	}
 }
 
 //Addressing modes
@@ -98,8 +106,7 @@ func (cpu *gameboyCPU) d16() uint16 {
 //OPCODES
 //Wonderful explanation for half carry flags at https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 
-func (cpu *gameboyCPU) INCR8(opcode uint8) {
-	opcode &= 0x7
+func (cpu *gameboyCPU) INC(opcode uint8) {
 	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(1)&0x10 == 0x10))
 
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + 1)
@@ -108,9 +115,8 @@ func (cpu *gameboyCPU) INCR8(opcode uint8) {
 	cpu.setFlag("N", false)
 }
 
-func (cpu *gameboyCPU) DECR8(opcode uint8) {
-	opcode &= 0x07
-	//REMEMBER H flag
+func (cpu *gameboyCPU) DEC(opcode uint8) {
+	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(1)) > 0xF)
 
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() - 1)
 
@@ -118,25 +124,86 @@ func (cpu *gameboyCPU) DECR8(opcode uint8) {
 	cpu.setFlag("N", false)
 }
 
-func (cpu *gameboyCPU) ADDR8(opcode uint8, value uint8) {
-	opcode &= 0x07
-	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(value&0x0F)&0x10 == 0x10))
-	cpu.setFlag("C", uint32(cpu.r8Read[opcode]())+uint32(value) > 0xFFFF)
+func (cpu *gameboyCPU) ADD(opcode uint8, operand uint8) {
+	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(operand&0x0F)&0x10 == 0x10))
+	cpu.setFlag("C", uint32(cpu.r8Read[opcode]())+uint32(operand) > 0xFFFF)
 
-	cpu.r8Write[opcode](cpu.r8Read[opcode]() + value)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() + operand)
 
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
+
+	cpu.currInstruction = "ADD A, r8"
 }
 
-func (cpu *gameboyCPU) SUBR8(opcode uint8, value uint8) {
-	opcode &= 0x07
-	//REMEMBER H flag
-	
-	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(value) > 0xFFFF))
+func (cpu *gameboyCPU) ADC(opcode uint8, operand uint8) {
+	cpu.setFlag("H", (((cpu.r8Read[opcode]()&0x0F)+(operand&0x0F)+cpu.carry())&0x10 == 0x10))
+	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())+uint32(operand)+uint32(cpu.carry())) > 0xFFFF)
 
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() + operand + cpu.carry())
 
-	cpu.r8Write[opcode](cpu.r8Read[opcode]() - value)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N", false)
+
+	cpu.currInstruction = "ADC A, r8"
+}
+
+func (cpu *gameboyCPU) SUB(opcode uint8, operand uint8) {
+	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)) > 0xF)
+	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(operand) > 0xFFFF))
+
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() - operand)
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", true)
+
+	cpu.currInstruction = "SUB A, r8"
+}
+
+func (cpu *gameboyCPU) SUBC(opcode uint8, operand uint8) {
+	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)-cpu.carry()) > 0xF)
+	cpu.setFlag("C", ((uint32(cpu.r8Read[opcode]()) - uint32(operand) - uint32(cpu.carry())) > 0xFFFF))
+
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() - operand - cpu.carry())
+
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N", true)
+
+	cpu.currInstruction = "SBC A, r8"
+}
+
+func (cpu *gameboyCPU) AND(opcode uint8, operand uint8) {
+
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() & cpu.r8Read[operand]())
+
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("H", true)
+
+	cpu.currInstruction = "AND A, r8"
+}
+
+func (cpu *gameboyCPU) XOR(opcode uint8, operand uint8) {
+
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() ^ cpu.r8Read[operand]())
+
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "XOR A, r8"
+}
+
+func (cpu *gameboyCPU) OR(opcode uint8, operand uint8) {
+
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() | cpu.r8Read[operand]())
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "OR A, r8"
+}
+
+func (cpu *gameboyCPU) CP(opcode uint8, operand uint8) {
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N", true)
+
+	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)) > 0xF)
+	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(operand) > 0xFFFF))
+
+	cpu.currInstruction = "CP A, r8"
 }

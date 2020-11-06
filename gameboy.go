@@ -1,9 +1,9 @@
 package main
 
 import (
-	//"fmt"
-	// "os"
-	// "strconv"
+//"fmt"
+// "os"
+// "strconv"
 )
 
 type gameboy struct {
@@ -26,6 +26,13 @@ func initGameboy(isDebugging bool) *gameboy {
 func main() {
 	gb := initGameboy(true)
 	gb.mmu.loadBlaarg("roms/testroms/cpu_instrs/cpu_instrs.gb")
+
+	gb.mmu.ram[0] = 0x81
+	gb.cpu.r8Write[0x01](1)
+	gb.cpu.cycle()
+	println(gb.cpu.currInstruction,gb.cpu.r8Read[7]())
+
+
 	for {
 		handleInput()
 	}
