@@ -27,10 +27,11 @@ func main() {
 	gb := initGameboy(true)
 	gb.mmu.loadBlaarg("roms/testroms/cpu_instrs/cpu_instrs.gb")
 
-	gb.mmu.ram[0] = 0x81
-	gb.cpu.r8Write[0x01](1)
+	gb.mmu.ram[0] = 0xCB
+	gb.mmu.ram[1] = 0xF8
+	gb.mmu.ram[2] = 0xFF
 	gb.cpu.cycle()
-	println(gb.cpu.currInstruction,gb.cpu.r8Read[7]())
+	println(gb.cpu.currInstruction,gb.cpu.r8Read[0]())
 
 
 	for {

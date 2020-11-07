@@ -207,3 +207,39 @@ func (cpu *gameboyCPU) CP(opcode uint8, operand uint8) {
 
 	cpu.currInstruction = "CP A, r8"
 }
+
+//ALU
+func (cpu *gameboyCPU) CCF(){
+	var carryFlag uint8
+	if cpu.getFlag("C"){
+		carryFlag = 1
+	} else {
+		carryFlag = 0
+	}
+
+	cpu.setFlag("C",carryFlag != 1) //XOR -> A != B
+}
+
+func (cpu *gameboyCPU) SCF(){
+	cpu.setFlag("C",true)
+}
+
+
+//EXTENDED--------------------------------
+func (cpu *gameboyCPU) BIT(opcode uint8, place uint8){
+	//Set zflag is bit not set 
+	cpu.setFlag("Z",cpu.r8Read[opcode]() & (1 << place) == 1)
+}
+
+func (cpu *gameboyCPU) RES(opcode uint8, place uint8){
+	//Reset bit
+	//Create a mask that is identical to the opcode except the bit we are resetting
+	//Eg: resetting 3rd bit: 0100 -> 1011 is now the mask to and with the opcode
+	mask := uint8(^(1 << place))
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() & mask)
+}
+
+func (cpu *gameboyCPU) SET(opcode uint8,place uint8){
+	//Set bit
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() | (1 << place))
+}

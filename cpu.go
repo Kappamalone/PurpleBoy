@@ -23,13 +23,9 @@ type gameboyCPU struct {
 	condition map[uint8]bool               //condition map
 	opTable1  map[uint8]func()             //opcode table 1 (accumulator and flag operation)
 	opTable2  map[uint8]func(uint8, uint8) //opcode table 2 (ALU operations)
+	opTable3  map[uint8]func(uint8)        //opcode table 3(CB shift/rotate operations)
 }
 
-func test() uint8 {
-	return uint8(0)
-}
-
-type fn func() uint8
 
 func initCPU(gb *gameboy) *gameboyCPU {
 	cpu := new(gameboyCPU)
@@ -78,6 +74,9 @@ func initCPU(gb *gameboy) *gameboyCPU {
 		2: !cpu.getFlag("N"), 3: cpu.getFlag("N"),
 	}
 
+	cpu.opTable1 = map[uint8]func(){
+		6: cpu.CCF, 7: cpu.SCF,
+	}
 	cpu.opTable2 = map[uint8]func(uint8, uint8){
 		0: cpu.ADD, 1: cpu.ADC, 2: cpu.SUB, 3: cpu.SUBC,
 		4: cpu.AND, 5: cpu.XOR, 6: cpu.OR, 7: cpu.OR,
@@ -289,7 +288,8 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) bool {
 	} else if opcode == 0xCB {
 		//CB prefix
 		extendedInstruction = true
-		cpu.d8()
+
+		opcode = cpu.gb.mmu.readbyte(cpu.PC) //make sure opcode is also updated alongside PC
 
 		if opcodeFormat([8]uint8{0, 0, 2, 2, 2, 2, 2, 2}, opcode) {
 			//Shifts/Rotates
@@ -298,18 +298,23 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) bool {
 
 		} else if opcodeFormat([8]uint8{0, 1, 2, 2, 2, 2, 2, 2}, opcode) {
 			//BIT bit, r8
+			cpu.BIT(opcode & 0x7, opcode >> 3 & 0x7)
 
 			cpu.currInstruction = "0xCB: BIT bit, r8"
 
 		} else if opcodeFormat([8]uint8{1, 0, 2, 2, 2, 2, 2, 2}, opcode) {
 			//RES bit, r8
+			cpu.RES(opcode & 0x7, opcode >> 3 & 0x7)
 
 			cpu.currInstruction = "0xCB: RES bit, r8"
 		} else if opcodeFormat([8]uint8{1, 1, 2, 2, 2, 2, 2, 2}, opcode) {
 			//SET bit, r8
-
+			cpu.SET(opcode & 0x7, opcode >> 3 & 0x7)
+			
 			cpu.currInstruction = "0xCB: SET bit, r8"
 		}
+
+		cpu.PC++ //Adjust PC after dealing with extended opcodes
 
 	} else if opcode == 0xF3 {
 		//Enable interupts
