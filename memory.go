@@ -27,12 +27,17 @@ func (mem *memory) writebyte(addr uint16, data uint8) {
 
 func (mem *memory) writeword(addr uint16, data uint16) {
 	//Account for low endian and store lsb first
-	mem.ram[addr] = uint8(data) & 0xFF
-	mem.ram[addr+1] = uint8(uint16(data) >> 8)
+	mem.ram[addr] = uint8(data & 0x00FF)
+	mem.ram[addr+1] = uint8((data & 0xFF00) >> 8)
 }
 
 func (mem *memory) readbyte(addr uint16) uint8 {
 	return mem.ram[addr]
+}
+
+func (mem *memory) readWord(addr uint16) uint16 {
+	//Account for low endian
+	return uint16(mem.ram[addr+1])<<8 | uint16(mem.ram[addr])
 }
 
 func (mem *memory) loadBootrom(path string) {

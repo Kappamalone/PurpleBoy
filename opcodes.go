@@ -103,135 +103,265 @@ func (cpu *gameboyCPU) d16() uint16 {
 	return hi<<8 | low
 }
 
+func addSigned(opcode uint16, signedValue uint8) uint16 {
+	//Th 2s Complement representation is a method of storing
+	//Negative numbers in a byte. The MSB indicates if the bit is
+	//negative, with the 0x80 being -128 and 0x7F being 127
+	//The reason I'm not directly computing the twos complement
+	//Is because these additions are adding uints of different sizes
+	if signedValue>>7 == 1 {
+		subtract := (1 << 7) - (signedValue & 0x7F)
+		return opcode - uint16(subtract)
+	} else {
+		add := signedValue & 0x7F
+		return opcode + uint16(add)
+	}
+}
+
 //OPCODES
 //Wonderful explanation for half carry flags at https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 
 func (cpu *gameboyCPU) INC(opcode uint8) {
-	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(1)&0x10 == 0x10))
-
+	cpu.setFlag("H", (((cpu.r8Read[opcode]()&0x0F)+(1))&0x10 == 0x10))
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + 1)
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 }
 
 func (cpu *gameboyCPU) DEC(opcode uint8) {
-	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(1)) > 0xF)
-
+	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F-(1))) > 0xF)
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() - 1)
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
-	cpu.setFlag("N", false)
+	cpu.setFlag("N", true)
 }
 
 func (cpu *gameboyCPU) ADD(opcode uint8, operand uint8) {
 	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)+(operand&0x0F)&0x10 == 0x10))
 	cpu.setFlag("C", uint32(cpu.r8Read[opcode]())+uint32(operand) > 0xFFFF)
-
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + operand)
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
-
-	cpu.currInstruction = "ADD A, r8"
 }
 
 func (cpu *gameboyCPU) ADC(opcode uint8, operand uint8) {
 	cpu.setFlag("H", (((cpu.r8Read[opcode]()&0x0F)+(operand&0x0F)+cpu.carry())&0x10 == 0x10))
 	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())+uint32(operand)+uint32(cpu.carry())) > 0xFFFF)
-
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + operand + cpu.carry())
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
-
-	cpu.currInstruction = "ADC A, r8"
 }
 
 func (cpu *gameboyCPU) SUB(opcode uint8, operand uint8) {
 	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)) > 0xF)
 	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(operand) > 0xFFFF))
-
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() - operand)
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", true)
-
-	cpu.currInstruction = "SUB A, r8"
 }
 
 func (cpu *gameboyCPU) SUBC(opcode uint8, operand uint8) {
 	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)-cpu.carry()) > 0xF)
 	cpu.setFlag("C", ((uint32(cpu.r8Read[opcode]()) - uint32(operand) - uint32(cpu.carry())) > 0xFFFF))
-
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() - operand - cpu.carry())
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", true)
-
-	cpu.currInstruction = "SBC A, r8"
 }
 
 func (cpu *gameboyCPU) AND(opcode uint8, operand uint8) {
-
-	cpu.r8Write[opcode](cpu.r8Read[opcode]() & cpu.r8Read[operand]())
-
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() & operand)
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N",false)
 	cpu.setFlag("H", true)
-
-	cpu.currInstruction = "AND A, r8"
+	cpu.setFlag("C",false)
 }
 
 func (cpu *gameboyCPU) XOR(opcode uint8, operand uint8) {
-
-	cpu.r8Write[opcode](cpu.r8Read[opcode]() ^ cpu.r8Read[operand]())
-
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() ^ operand)
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N",false)
+	cpu.setFlag("H",false)
+	cpu.setFlag("C",false)
 
-	cpu.currInstruction = "XOR A, r8"
 }
 
 func (cpu *gameboyCPU) OR(opcode uint8, operand uint8) {
-
-	cpu.r8Write[opcode](cpu.r8Read[opcode]() | cpu.r8Read[operand]())
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() | operand)
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("N",false)
+	cpu.setFlag("H",false)
+	cpu.setFlag("C",false)
 
-	cpu.currInstruction = "OR A, r8"
 }
 
 func (cpu *gameboyCPU) CP(opcode uint8, operand uint8) {
-	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+	cpu.setFlag("Z", (cpu.r8Read[opcode]() - operand) == 0)
 	cpu.setFlag("N", true)
-
-	cpu.setFlag("H", (cpu.r8Read[opcode]()&0x0F-(operand&0x0F)) > 0xF)
+	cpu.setFlag("H", ((cpu.r8Read[opcode]()&0x0F)-(operand&0x0F)) > 0xF)
 	cpu.setFlag("C", (uint32(cpu.r8Read[opcode]())-uint32(operand) > 0xFFFF))
-
-	cpu.currInstruction = "CP A, r8"
 }
 
-//ALU
-func (cpu *gameboyCPU) CCF(){
-	var carryFlag uint8
-	if cpu.getFlag("C"){
-		carryFlag = 1
-	} else {
-		carryFlag = 0
+//ALU OPCODES--------------------------
+func (cpu *gameboyCPU) RLCA() {
+	//Rotate register A left
+	//Rotations shift bits by one place and wrap them
+	//Around the byte if necessary
+	cpu.setFlag("C", cpu.r8Read[7]()>>7 == 1)
+	cpu.r8Write[7](cpu.r8Read[7]()<<1 | cpu.r8Read[7]()>>7)
+
+}
+
+func (cpu *gameboyCPU) RRCA() {
+	//Rotate register A right
+	cpu.setFlag("C", cpu.r8Read[7]()&0x01 == 1)
+	cpu.r8Write[7](cpu.r8Read[7]()>>1 | cpu.r8Read[7]()<<7)
+
+}
+
+func (cpu *gameboyCPU) RLA() {
+	//Rotate register A left through carry
+	var cflag uint8 //Get int version from bool
+	if cpu.getFlag("C") {
+		cflag = 1
 	}
-
-	cpu.setFlag("C",carryFlag != 1) //XOR -> A != B
+	cpu.setFlag("C", cpu.r8Read[7]()>>7 == 1)
+	cpu.r8Write[7](cpu.r8Read[7]()<<1 | cflag)
 }
 
-func (cpu *gameboyCPU) SCF(){
-	cpu.setFlag("C",true)
+func (cpu *gameboyCPU) RRA() {
+	//Rotate register A right through carry
+	var cflag uint8 //Get int version from
+	if cpu.getFlag("C") {
+		cflag = 1
+	}
+	cpu.setFlag("C", cpu.r8Read[7]()&0x01 == 1)
+	cpu.r8Write[7](cpu.r8Read[7]()>>1 | cflag)
+
 }
 
+func (cpu *gameboyCPU) DAA() {
+	//Decimal Adjust Accumulator: To get correct BCD
+	//Representation after an arithmetic instructioon
+
+}
+
+func (cpu *gameboyCPU) CPL() {
+	//Complement accumulator
+	cpu.r8Write[7](^cpu.r8Read[7]())
+
+	cpu.setFlag("N", true)
+	cpu.setFlag("H", true)
+}
+
+func (cpu *gameboyCPU) CCF() {
+	cpu.setFlag("N", false)
+	cpu.setFlag("H", false)
+	cpu.setFlag("C", !cpu.getFlag("C"))
+}
+
+func (cpu *gameboyCPU) SCF() {
+	cpu.setFlag("N", false)
+	cpu.setFlag("H", false)
+	cpu.setFlag("C", true)
+}
+
+//JUMP OPCODES--------------------------
+func (cpu *gameboyCPU) CALL(addr uint16) {
+	//A call is essentially jumping to an address and placing the PC on
+	//The stack to return to once the subroutine is finished executing
+	cpu.SP -= 2
+	cpu.gb.mmu.writeword(cpu.SP, cpu.PC)
+	cpu.PC = addr
+}
+
+func (cpu *gameboyCPU) RET() {
+	cpu.PC = cpu.gb.mmu.readWord(cpu.SP)
+	cpu.SP += 2
+}
+
+func (cpu *gameboyCPU) JR(relativeJumpValue uint8) {
+	//A relative jump using a signed int
+	cpu.PC = addSigned(cpu.PC, relativeJumpValue)
+}
 
 //EXTENDED--------------------------------
-func (cpu *gameboyCPU) BIT(opcode uint8, place uint8){
-	//Set zflag is bit not set 
-	cpu.setFlag("Z",cpu.r8Read[opcode]() & (1 << place) == 1)
+func (cpu *gameboyCPU) RLC(opcode uint8) {
+	cpu.setFlag("C", cpu.r8Read[opcode]()>>7 == 1)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]()<<1 | cpu.r8Read[opcode]()>>7)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "RLC"
 }
 
-func (cpu *gameboyCPU) RES(opcode uint8, place uint8){
+func (cpu *gameboyCPU) RRC(opcode uint8) {
+	cpu.setFlag("C", cpu.r8Read[opcode]()&0x01 == 1)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]()>>1 | cpu.r8Read[opcode]()<<7)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "RRC"
+}
+
+func (cpu *gameboyCPU) RL(opcode uint8) {
+	var cflag uint8
+	if cpu.getFlag("C") {
+		cflag = 1
+	}
+	cpu.setFlag("C", cpu.r8Read[opcode]()>>7 == 1)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]()<<1 | cflag)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "RL"
+}
+
+func (cpu *gameboyCPU) RR(opcode uint8) {
+	var cflag uint8
+	if cpu.getFlag("C") {
+		cflag = 1
+	}
+	cpu.setFlag("C", cpu.r8Read[opcode]()&0x01 == 1)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]()>>1 | cflag)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "RR"
+}
+
+func (cpu *gameboyCPU) SLA(opcode uint8) {
+	//So it seems arithmetic and logical shifts are
+	//actually different
+
+	cpu.currInstruction = "SLA"
+}
+
+func (cpu *gameboyCPU) SRA(opcode uint8) {
+
+	cpu.currInstruction = "SRA"
+
+}
+
+func (cpu *gameboyCPU) SWAP(opcode uint8) {
+	hi := (cpu.r8Read[opcode]() & 0xF0) >> 4
+	low := cpu.r8Read[opcode]() & 0x0F
+	cpu.r8Write[opcode](low<<4 | hi)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "SWAP"
+}
+
+func (cpu *gameboyCPU) SRL(opcode uint8) {
+	cpu.setFlag("C", cpu.r8Read[opcode]()&0x01 == 1)
+	cpu.r8Write[opcode](cpu.r8Read[opcode]() >> 1)
+	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
+
+	cpu.currInstruction = "SRL"
+}
+
+func (cpu *gameboyCPU) BIT(opcode uint8, place uint8) {
+	//Set zflag is bit not set
+	cpu.setFlag("Z", cpu.r8Read[opcode]()&(1<<place) == 1)
+	cpu.setFlag("N", false)
+	cpu.setFlag("H", true)
+}
+
+func (cpu *gameboyCPU) RES(opcode uint8, place uint8) {
 	//Reset bit
 	//Create a mask that is identical to the opcode except the bit we are resetting
 	//Eg: resetting 3rd bit: 0100 -> 1011 is now the mask to and with the opcode
@@ -239,7 +369,7 @@ func (cpu *gameboyCPU) RES(opcode uint8, place uint8){
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() & mask)
 }
 
-func (cpu *gameboyCPU) SET(opcode uint8,place uint8){
+func (cpu *gameboyCPU) SET(opcode uint8, place uint8) {
 	//Set bit
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() | (1 << place))
 }
