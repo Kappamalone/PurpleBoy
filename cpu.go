@@ -127,9 +127,9 @@ func initCPU(gb *gameboy) *gameboyCPU {
 
 	cpu.opTable1 = map[uint8]func(){
 		0: cpu.RLCA, 1: cpu.RRCA,
-		2: cpu.RLA,  3: cpu.RRA,
-		4: cpu.DAA,  5: cpu.CPL,
-		6: cpu.CCF,  7: cpu.SCF,
+		2: cpu.RLA, 3: cpu.RRA,
+		4: cpu.DAA, 5: cpu.CPL,
+		6: cpu.CCF, 7: cpu.SCF,
 	}
 
 	cpu.opTable2 = map[uint8]func(uint8, uint8){
@@ -139,9 +139,9 @@ func initCPU(gb *gameboy) *gameboyCPU {
 
 	cpu.opTable3 = map[uint8]func(uint8){
 		0: cpu.RLC, 1: cpu.RRC,
-		2: cpu.RL,  3: cpu.RR,
+		2: cpu.RL, 3: cpu.RR,
 		4: cpu.SLA, 5: cpu.SRA,
-		6: cpu.SWAP,7: cpu.SRL,
+		6: cpu.SWAP, 7: cpu.SRL,
 	}
 
 	return cpu
@@ -209,8 +209,10 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 1, 0, 0, 1}, opcode) {
 		//ADD HL, r16
-
-		cpu.HL += *cpu.r16group1[opcode>>4&0x3]
+		cpu.setFlag("H", ((cpu.HL&0x0F00)+(*cpu.r16group1[opcode>>4&0x03])&0x0F00)&0x1000 == 0x1000)
+		cpu.setFlag("C", (uint32(cpu.HL)+uint32(*cpu.r16group1[opcode>>4&0x03]) > 0xFFFF))
+		cpu.HL += *cpu.r16group1[opcode>>4&0x03]
+		cpu.setFlag("N", false)
 		cpu.currInstruction = "ADD HL, r16"
 
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 0, 0, 1, 0}, opcode) {
@@ -316,7 +318,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	} else if opcodeFormat([8]uint8{1, 1, 2, 2, 0, 0, 0, 1}, opcode) {
 		//POP r16 (group 3)
 		*cpu.r16group3[opcode>>4&0x03] = cpu.gb.mmu.readWord(cpu.SP)
-		if opcode >> 4 & 0x03 == 3 {
+		if opcode>>4&0x03 == 3 {
 			cpu.AF &= 0xFFF0 //Always set lower 4 bits of AF to 0
 		}
 		cpu.SP += 2 //Stack regresses upwards
@@ -345,8 +347,9 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcodeFormat([8]uint8{1, 1, 0, 2, 2, 0, 1, 0}, opcode) {
 		//JP condition
+		jmp := cpu.d16()
 		if cpu.condition[opcode>>3&0x03]() {
-			cpu.PC = cpu.d16()
+			cpu.JP(jmp)
 			cpu.cycles += 4
 		}
 		cpu.currInstruction = "JP condition"
@@ -373,9 +376,8 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcode == 0xC3 {
 		//JP u16
-		jmp := cpu.d16()
-		cpu.PC = jmp
-		cpu.currInstruction = fmt.Sprintf("JP %04X", jmp)
+		cpu.JP(cpu.d16())
+		cpu.currInstruction = fmt.Sprintf("JP Conditional")
 
 	} else if opcode == 0xCB {
 		//CB prefix
