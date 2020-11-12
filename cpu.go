@@ -209,7 +209,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 1, 0, 0, 1}, opcode) {
 		//ADD HL, r16
-		cpu.setFlag("H", ((cpu.HL&0x0F00)+(*cpu.r16group1[opcode>>4&0x03])&0x0F00)&0x1000 == 0x1000)
+		cpu.setFlag("H", ((cpu.HL&0x0FFF)+(*cpu.r16group1[opcode>>4&0x03]&0x0FFF))&0x1000 == 0x1000)
 		cpu.setFlag("C", (uint32(cpu.HL)+uint32(*cpu.r16group1[opcode>>4&0x03]) > 0xFFFF))
 		cpu.HL += *cpu.r16group1[opcode>>4&0x03]
 		cpu.setFlag("N", false)
@@ -218,7 +218,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 0, 0, 1, 0}, opcode) {
 		//LD (r16 group 2), A
 
-		cpu.gb.mmu.writebyte(*cpu.r16group2[opcode>>4&0x3], cpu.r8Read[7]())
+		cpu.gb.mmu.writebyte(*cpu.r16group2[opcode>>4&0x3], cpu.getAcc())
 
 		if opcode>>4&0x3 == 2 {
 			cpu.HL++
@@ -230,7 +230,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 1, 0, 1, 0}, opcode) {
 		//LD A, (r16 group 2)
 
-		cpu.r8Write[7](cpu.gb.mmu.readbyte(*cpu.r16group2[opcode>>4&0x3]))
+		cpu.setAcc(cpu.gb.mmu.readbyte(*cpu.r16group2[opcode>>4&0x3]))
 
 		if opcode>>4&0x3 == 2 {
 			cpu.HL++
@@ -297,22 +297,32 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcode == 0xE0 {
 		//LD (0xFF00 + u8), A
-		cpu.gb.mmu.writebyte(0xFF00+uint16(cpu.d8()), cpu.r8Read[7]())
+		cpu.gb.mmu.writebyte(0xFF00+uint16(cpu.d8()), cpu.getAcc())
 		cpu.currInstruction = "LD (0xFF00 + u8)"
 
 	} else if opcode == 0xE8 {
 		//ADD SP,i8
-		cpu.SP = addSigned(cpu.SP, cpu.d8())
+		signedValue := cpu.d8()
+		cpu.setFlag("H", ((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
+		cpu.setFlag("C", (uint16(cpu.SP&0xFF)+uint16(signedValue)) > 0xFF)
+		cpu.SP = addSigned(cpu.SP, signedValue)
+		cpu.setFlag("Z", false)
+		cpu.setFlag("N", false)
 		cpu.currInstruction = "ADD SP, i8"
 
 	} else if opcode == 0xF0 {
 		//LD A, (0xFF00 + u8)
-		cpu.r8Write[7](cpu.gb.mmu.readbyte(0xFF00 + uint16(cpu.d8())))
+		cpu.setAcc(cpu.gb.mmu.readbyte(0xFF00 + uint16(cpu.d8())))
 		cpu.currInstruction = "LD A, (0xFF00 + u8)"
 
 	} else if opcode == 0xF8 {
 		//LD HL, SP + i8
-		cpu.HL = addSigned(cpu.SP, cpu.d8())
+		signedValue := cpu.d8()
+		cpu.setFlag("H", ((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
+		cpu.setFlag("C", (uint16(cpu.SP&0xFF)+uint16(signedValue)) > 0xFF)
+		cpu.HL = addSigned(cpu.SP, signedValue)
+		cpu.setFlag("Z", false)
+		cpu.setFlag("N", false)
 		cpu.currInstruction = "LD HL, SP + i8"
 
 	} else if opcodeFormat([8]uint8{1, 1, 2, 2, 0, 0, 0, 1}, opcode) {
@@ -356,22 +366,22 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcode == 0xE2 {
 		//LD (0xFF00 + C), A
-		cpu.gb.mmu.writebyte(0xFF00+uint16(cpu.r8Read[1]()), cpu.r8Read[7]())
+		cpu.gb.mmu.writebyte(0xFF00+uint16(cpu.r8Read[1]()), cpu.getAcc())
 		cpu.currInstruction = "LD (0xFF00 + C), A"
 
 	} else if opcode == 0xEA {
 		//LD (u16), A
-		cpu.gb.mmu.writebyte(cpu.d16(), cpu.r8Read[7]())
+		cpu.gb.mmu.writebyte(cpu.d16(), cpu.getAcc())
 		cpu.currInstruction = "LD (u16), A"
 
 	} else if opcode == 0xF2 {
 		//LD A, (0xFF00 + C)
-		cpu.r8Write[7](cpu.gb.mmu.readbyte(0xFF00 + uint16(cpu.r8Read[1]())))
+		cpu.setAcc(cpu.gb.mmu.readbyte(0xFF00 + uint16(cpu.r8Read[1]())))
 		cpu.currInstruction = "LD A, (0xFF00 + C)"
 
 	} else if opcode == 0xFA {
 		//LD A, (u16)
-		cpu.r8Write[7](cpu.gb.mmu.readbyte(cpu.d16()))
+		cpu.setAcc(cpu.gb.mmu.readbyte(cpu.d16()))
 		cpu.currInstruction = "LD A, (u16)"
 
 	} else if opcode == 0xC3 {
