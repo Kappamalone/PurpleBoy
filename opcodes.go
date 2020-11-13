@@ -1,6 +1,6 @@
 package main
 
-//"fmt"
+//import "fmt"
 //"strings"
 
 func opcodeFormat(patternArray [8]uint8, opcode uint8) bool {
@@ -262,33 +262,34 @@ func (cpu *gameboyCPU) DAA() {
 	//Decimal Adjust Accumulator: To get correct BCD
 	//Representation after an arithmetic instruction
 	//Basically the scariest thing about the CPU
+	//I'll be completely honest I gave up and copied another implementation
 
-	if !cpu.getFlag("Z") {
+	var acc uint8 = cpu.getAcc() //Temp var ensure there is proper overflow when dealing with BCD
+
+	if !cpu.getFlag("N") {
 		//Previous instruction was an addition
-		//Deal with low nibble
-		if cpu.getFlag("H") || ((cpu.getAcc() & 0x0F) > 0x09) {
-			cpu.setAcc(cpu.getAcc() + 0x06)
-		}
-
 		//Deal with high nibble
-		if cpu.getFlag("C") || ((cpu.getAcc()) > 0x9F) { //0x99 instead of 0x90
-			cpu.setAcc(cpu.getAcc() + 0x60)
+		if cpu.getFlag("C") || (acc > 0x99) { //0x99 instead of 0x90
+			acc += 0x60
 			cpu.setFlag("C", true)
 		}
-
+		//Deal with low nibble
+		if cpu.getFlag("H") || ((acc & 0x0F) > 0x09) {
+			acc += 0x06
+		}
 	} else {
 		//Previous instruction was a subtraction
-		if cpu.getFlag("H") {
-			cpu.setAcc(cpu.getAcc() - 0x06)
-		}
-
 		if cpu.getFlag("C") {
-			cpu.setAcc(cpu.getAcc() - 0x60)
+			acc -= 0x60
 			cpu.setFlag("C", true)
+		}
+		if cpu.getFlag("H") {
+			acc -= 0x06
 		}
 
 	}
 
+	cpu.setAcc(acc)
 	cpu.setFlag("Z", cpu.getAcc() == 0)
 	cpu.setFlag("H", false)
 }
@@ -334,6 +335,12 @@ func (cpu *gameboyCPU) JP(addr uint16) {
 func (cpu *gameboyCPU) JR(relativeJumpValue uint8) {
 	//A relative jump using a signed int
 	cpu.PC = addSigned(cpu.PC, relativeJumpValue)
+}
+
+func (cpu *gameboyCPU) RST(addr uint8) {
+	cpu.SP -= 2
+	cpu.gb.mmu.writeword(cpu.SP, cpu.PC)
+	cpu.PC = uint16(addr)
 }
 
 //EXTENDED--------------------------------
@@ -388,10 +395,8 @@ func (cpu *gameboyCPU) RR(opcode uint8) {
 func (cpu *gameboyCPU) SLA(opcode uint8) {
 	//So it seems arithmetic and logical shifts are
 	//actually different
-	//Arithemtic shifts are unique since they are used on signed ints
-	cpu.setFlag("C", (opcode&0x80) == 0x80)
+	cpu.setFlag("C", (cpu.r8Read[opcode]()&0x80) == 0x80)
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() << 1 & 0xFE)
-
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
@@ -399,8 +404,8 @@ func (cpu *gameboyCPU) SLA(opcode uint8) {
 }
 
 func (cpu *gameboyCPU) SRA(opcode uint8) {
-	cpu.setFlag("C", opcode&0x01 == 0x01)
-	signedBit := opcode & 0x80
+	cpu.setFlag("C", (cpu.r8Read[opcode]()&0x01) == 0x01)
+	signedBit := cpu.r8Read[opcode]() & 0x80
 	cpu.r8Write[opcode](cpu.r8Read[opcode]()>>1 | signedBit)
 
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
@@ -433,7 +438,7 @@ func (cpu *gameboyCPU) SRL(opcode uint8) {
 
 func (cpu *gameboyCPU) BIT(opcode uint8, place uint8) {
 	//Set zflag is bit not set
-	cpu.setFlag("Z", cpu.r8Read[opcode]()&(1<<place) == 1)
+	cpu.setFlag("Z", (cpu.r8Read[opcode]()&(1<<place)) == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", true)
 }

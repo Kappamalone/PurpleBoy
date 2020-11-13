@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	//"log"
+)
 
 type gameboyCPU struct {
 	gb *gameboy
@@ -14,8 +17,9 @@ type gameboyCPU struct {
 	PC uint16
 
 	cycles          int
+	EI              bool
 	currInstruction string
-	halt            bool
+	Halt            bool
 
 	r8Read    map[uint8]func() uint8       //r8 group 1 reads
 	r8Write   map[uint8]func(uint8)        //r8 group 1 write
@@ -129,7 +133,7 @@ func initCPU(gb *gameboy) *gameboyCPU {
 		0: cpu.RLCA, 1: cpu.RRCA,
 		2: cpu.RLA, 3: cpu.RRA,
 		4: cpu.DAA, 5: cpu.CPL,
-		6: cpu.CCF, 7: cpu.SCF,
+		6: cpu.SCF, 7: cpu.CCF,
 	}
 
 	cpu.opTable2 = map[uint8]func(uint8, uint8){
@@ -149,31 +153,35 @@ func initCPU(gb *gameboy) *gameboyCPU {
 
 func (cpu *gameboyCPU) cycle() {
 	/*
-		if cpu.cycles == 0 {
-			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
-			cpu.PC++
+	if cpu.cycles == 0 {
+		fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
+		cpu.PC++
 
-			if fetchedInstruction == 0xCB {
-				//add cycles for cb
-				cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
-			} else {
-				//add cycles for regular instruction
-				cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
-			}
-
-			cpu.decodeAndExecute(fetchedInstruction)
-
+		if fetchedInstruction == 0xCB {
+			//add cycles for cb
+			cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
+		} else {
+			//add cycles for regular instruction
+			cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
 		}
-		cpu.cycles-- */
+
+		cpu.decodeAndExecute(fetchedInstruction)
+
+	} 
+	cpu.cycles-- */
+	
 	fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
 	cpu.PC++
 	cpu.decodeAndExecute(fetchedInstruction)
+	if cpu.EI && fetchedInstruction != 0xFB {
+		cpu.gb.mmu.writebyte(0xFFFF, 1)
+		cpu.EI = false
+	}
 }
 
 func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	//TODO: make sure instruction timings for branch instructions are correct by
 	//Referencing the opcode table
-
 	if opcode == 0x00 {
 		//NOP
 		cpu.currInstruction = "NOP"
@@ -219,22 +227,19 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		//LD (r16 group 2), A
 
 		cpu.gb.mmu.writebyte(*cpu.r16group2[opcode>>4&0x3], cpu.getAcc())
-
-		if opcode>>4&0x3 == 2 {
+		if (opcode>>4&0x3) == 2 {
 			cpu.HL++
-		} else if opcode>>4&0x3 == 3 {
+		} else if (opcode>>4)&0x3 == 3 {
 			cpu.HL--
 		}
 		cpu.currInstruction = "LD (r16), A"
 
 	} else if opcodeFormat([8]uint8{0, 0, 2, 2, 1, 0, 1, 0}, opcode) {
 		//LD A, (r16 group 2)
-
 		cpu.setAcc(cpu.gb.mmu.readbyte(*cpu.r16group2[opcode>>4&0x3]))
-
-		if opcode>>4&0x3 == 2 {
+		if (opcode>>4&0x3) == 2 {
 			cpu.HL++
-		} else if opcode>>4&0x3 == 3 {
+		} else if (opcode>>4)&0x3 == 3 {
 			cpu.HL--
 		}
 		cpu.currInstruction = "LD A, (r16)"
@@ -274,9 +279,9 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.opTable1[opcode>>3&0x07]()
 
 	} else if opcode == 0x76 {
-		//HALT -> Important to have this occur before LD r8,r8 as it overlaps with LD HL,HL
-		cpu.halt = true
-		cpu.currInstruction = "HALT"
+		//Halt -> Important to have this occur before LD r8,r8 as it overlaps with LD HL,HL
+		cpu.Halt = true
+		cpu.currInstruction = "Halt"
 
 	} else if opcodeFormat([8]uint8{0, 1, 2, 2, 2, 2, 2, 2}, opcode) {
 		//LD r8,r8
@@ -371,7 +376,8 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcode == 0xEA {
 		//LD (u16), A
-		cpu.gb.mmu.writebyte(cpu.d16(), cpu.getAcc())
+		addr := cpu.d16()
+		cpu.gb.mmu.writebyte(addr, cpu.getAcc())
 		cpu.currInstruction = "LD (u16), A"
 
 	} else if opcode == 0xF2 {
@@ -395,34 +401,35 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 		if opcodeFormat([8]uint8{0, 0, 2, 2, 2, 2, 2, 2}, opcode) {
 			//Shifts/Rotates
-			cpu.opTable3[opcode>>3&0x07](opcode & 0x07)
+			cpu.opTable3[(opcode>>3)&0x07](opcode & 0x7)
 
 		} else if opcodeFormat([8]uint8{0, 1, 2, 2, 2, 2, 2, 2}, opcode) {
 			//BIT bit, r8
-			cpu.BIT(opcode&0x7, opcode>>3&0x7)
+			cpu.BIT(opcode&0x7, (opcode>>3)&0x7)
 			cpu.currInstruction = "0xCB: BIT bit, r8"
 
 		} else if opcodeFormat([8]uint8{1, 0, 2, 2, 2, 2, 2, 2}, opcode) {
 			//RES bit, r8
-			cpu.RES(opcode&0x7, opcode>>3&0x7)
+			cpu.RES(opcode&0x7, (opcode>>3)&0x7)
 			cpu.currInstruction = "0xCB: RES bit, r8"
 		} else if opcodeFormat([8]uint8{1, 1, 2, 2, 2, 2, 2, 2}, opcode) {
 			//SET bit, r8
-			cpu.SET(opcode&0x7, opcode>>3&0x7)
+			cpu.SET(opcode&0x7, (opcode>>3)&0x7)
 			cpu.currInstruction = "0xCB: SET bit, r8"
 		}
 
 		cpu.PC++ //Adjust PC after dealing with extended opcodes
 
 	} else if opcode == 0xF3 {
-		//Enable interupts
-		cpu.gb.mmu.writebyte(0xFFFF, 1)
-		cpu.currInstruction = "Enable interrupts"
+		//Disable interupts
+		cpu.gb.mmu.writebyte(0xFFFF,0)
+		cpu.currInstruction = "Disable Interupts"
+		
 
 	} else if opcode == 0xFB {
-		//Disable interupts
-		cpu.gb.mmu.writebyte(0xFFFF, 0)
-		cpu.currInstruction = "Disable Interupts"
+		//Enable interupts
+		cpu.EI = true
+		cpu.currInstruction = "Enable interrupts"
 
 	} else if opcodeFormat([8]uint8{1, 1, 0, 2, 2, 1, 0, 0}, opcode) {
 		//CALL condition
@@ -434,7 +441,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.currInstruction = "CALL condition"
 
 	} else if opcodeFormat([8]uint8{1, 1, 2, 2, 0, 1, 0, 1}, opcode) {
-		//PUSH r16 group 3 POSSIBLE PROBLEM
+		//PUSH r16 group 3 
 		cpu.SP -= 2 //Stack grows downwards
 		cpu.gb.mmu.writeword(cpu.SP, *cpu.r16group3[opcode>>4&0x03])
 		cpu.currInstruction = "PUSH r16"
@@ -451,7 +458,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcodeFormat([8]uint8{1, 1, 2, 2, 2, 1, 1, 1}, opcode) {
 		//RST: Call to a given vector
-		//Not really sure how it works :0
+		cpu.RST(opcode & 0x38)
 		cpu.currInstruction = "RST"
 
 	} else {
