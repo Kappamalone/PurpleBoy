@@ -3,29 +3,6 @@ package main
 //import "fmt"
 //"strings"
 
-func opcodeFormat(patternArray [8]uint8, opcode uint8) bool {
-	//Takes an input in the form of a string such as
-	//"11220011" and return true if the opcode matches
-	//the pattern (2 are ignored bits)
-
-	match := true
-	for i := 0; i < 8; i++ {
-		if patternArray[i] != 2 {
-			if patternArray[i] == 1 {
-				if (opcode & (1 << (7 - i))) == 0 { //Checks if (7-ith) bit is not set
-					match = false
-				}
-			} else if patternArray[i] == 0 {
-				if (opcode & (1 << (7 - i))) > 0 { //Checks if (7-ith) bit is not set
-					match = false
-				}
-			}
-		}
-	}
-
-	return match
-}
-
 func (cpu *gameboyCPU) setFlag(flag string, operand bool) {
 	switch flag {
 	case "Z":
@@ -107,21 +84,6 @@ func (cpu *gameboyCPU) d16() uint16 {
 	cpu.PC += 2
 
 	return hi<<8 | low
-}
-
-func addSigned(opcode uint16, signedValue uint8) uint16 {
-	//Th 2s Complement representation is a method of storing
-	//Negative numbers in a byte. The MSB indicates if the bit is
-	//negative, with the 0x80 being -128 and 0x7F being 127
-	//The reason I'm not directly computing the twos complement
-	//Is because these additions are adding uints of different sizes
-	if signedValue>>7 == 1 {
-		subtract := (1 << 7) - (signedValue & 0x7F)
-		return opcode - uint16(subtract)
-	} else {
-		add := signedValue & 0x7F
-		return opcode + uint16(add)
-	}
 }
 
 //OPCODES
@@ -350,8 +312,6 @@ func (cpu *gameboyCPU) RLC(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-
-	cpu.currInstruction = "RLC"
 }
 
 func (cpu *gameboyCPU) RRC(opcode uint8) {
@@ -360,8 +320,6 @@ func (cpu *gameboyCPU) RRC(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-
-	cpu.currInstruction = "RRC"
 }
 
 func (cpu *gameboyCPU) RL(opcode uint8) {
@@ -374,8 +332,6 @@ func (cpu *gameboyCPU) RL(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-
-	cpu.currInstruction = "RL"
 }
 
 func (cpu *gameboyCPU) RR(opcode uint8) {
@@ -388,8 +344,6 @@ func (cpu *gameboyCPU) RR(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-
-	cpu.currInstruction = "RR"
 }
 
 func (cpu *gameboyCPU) SLA(opcode uint8) {
@@ -400,7 +354,6 @@ func (cpu *gameboyCPU) SLA(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-	cpu.currInstruction = "SLA"
 }
 
 func (cpu *gameboyCPU) SRA(opcode uint8) {
@@ -411,8 +364,6 @@ func (cpu *gameboyCPU) SRA(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-	cpu.currInstruction = "SRA"
-
 }
 
 func (cpu *gameboyCPU) SWAP(opcode uint8) {
@@ -423,7 +374,6 @@ func (cpu *gameboyCPU) SWAP(opcode uint8) {
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
 	cpu.setFlag("C", false)
-	cpu.currInstruction = "SWAP"
 }
 
 func (cpu *gameboyCPU) SRL(opcode uint8) {
@@ -432,8 +382,6 @@ func (cpu *gameboyCPU) SRL(opcode uint8) {
 	cpu.setFlag("Z", cpu.r8Read[opcode]() == 0)
 	cpu.setFlag("N", false)
 	cpu.setFlag("H", false)
-
-	cpu.currInstruction = "SRL"
 }
 
 func (cpu *gameboyCPU) BIT(opcode uint8, place uint8) {

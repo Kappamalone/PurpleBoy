@@ -4,66 +4,64 @@ import (
 	"io/ioutil"
 )
 
-func checkErr(err error, errormsg string) {
-	if err != nil {
-		panic(errormsg)
-	}
-}
-
 type memory struct {
-	gameboy *gameboy
-	ram     [1024 * 64]uint8
+	gb  *gameboy
+	ram [1024 * 64]uint8
 }
 
 func initMemory(gb *gameboy) *memory {
-	mem := new(memory)
-	mem.gameboy = gb
-	return mem
+	mmu := new(memory)
+	mmu.gb = gb
+	return mmu
 }
 
-func (mem *memory) writebyte(addr uint16, data uint8) {
-	mem.ram[addr] = data
+//MMU LOGIC---------------------------
+
+func (mmu *memory) writebyte(addr uint16, data uint8) {
+	mmu.ram[addr] = data
 }
 
-func (mem *memory) writeword(addr uint16, data uint16) {
-	//Account for low endian and store lsb first
-	mem.ram[addr] = uint8(data & 0x00FF)
-	mem.ram[addr+1] = uint8((data & 0xFF00) >> 8)
+func (mmu *memory) readbyte(addr uint16) uint8 {
+	//Time to do some cool mmu stuff
+	return mmu.ram[addr]
 }
 
-func (mem *memory) readbyte(addr uint16) uint8 {
-	return mem.ram[addr]
-}
-
-func (mem *memory) readWord(addr uint16) uint16 {
+func (mmu *memory) readWord(addr uint16) uint16 {
 	//Account for low endian
-	return uint16(mem.ram[addr+1])<<8 | uint16(mem.ram[addr])
+	return uint16(mmu.ram[addr+1])<<8 | uint16(mmu.ram[addr])
 }
 
-func (mem *memory) loadBootrom(path string) {
+func (mmu *memory) writeword(addr uint16, data uint16) {
+	//Account for low endian and store lsb first
+	mmu.ram[addr] = uint8(data & 0x00FF)
+	mmu.ram[addr+1] = uint8((data & 0xFF00) >> 8)
+}
+
+//ROM LOADING--------------------------
+func (mmu *memory) loadBootrom(path string) {
 	file, err := ioutil.ReadFile(path)
 	checkErr(err, "Could not find bootrom!")
 
 	for i := 0; i < len(file); i++ {
-		mem.ram[i] = file[i]
+		mmu.ram[i] = file[i]
 	}
 
 }
 
-func (mem *memory) loadBlaarg(path string) {
+func (mmu *memory) loadBlaarg(path string) {
 	file, err := ioutil.ReadFile(path)
 	checkErr(err, "Could not find rom specified!")
 
 	for i := 0; i < len(file); i++ {
-		mem.ram[i] = file[i]
+		mmu.ram[i] = file[i]
 	}
 }
 
-func (mem *memory) loadRom(path string) {
+func (mmu *memory) loadRom(path string) {
 	file, err := ioutil.ReadFile(path)
 	checkErr(err, "Could not find rom specified!")
 
 	for i := 0; i < len(file); i++ {
-		mem.ram[0x100+i] = file[i]
+		mmu.ram[0x100+i] = file[i]
 	}
 }
