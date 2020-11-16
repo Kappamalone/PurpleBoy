@@ -22,7 +22,7 @@ func initGameboy(isDebugging bool) *gameboy {
 	return gb
 }
 
-var cfile string = "02-interrupts"
+var cfile string = "10-bit ops"
 
 func main() {
 	gb := initGameboy(true)
@@ -30,7 +30,7 @@ func main() {
 	gb.mmu.loadBlaarg(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 
 	for {
-		gb.debug.logTrace()
+		//gb.debug.logTrace()
 		gb.cpu.cycle()
 		if gb.mmu.ram[0xFF02] == 0x81 {
 			fmt.Printf("%c", gb.mmu.ram[0xFF01])

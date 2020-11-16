@@ -10,6 +10,72 @@ func checkErr(err error, errormsg string) {
 	}
 }
 
+//F register getters and setters
+func (cpu *gameboyCPU) setZ(flag bool) {
+	if flag {
+		cpu.AF |= 128
+	} else {
+		cpu.AF &^= 128
+	}
+}
+
+func (cpu *gameboyCPU) setN(flag bool) {
+	if flag {
+		cpu.AF |= 64
+	} else {
+		cpu.AF &^= 64
+	}
+}
+
+func (cpu *gameboyCPU) setH(flag bool) {
+	if flag {
+		cpu.AF |= 32
+	} else {
+		cpu.AF &^= 32
+	}
+}
+
+func (cpu *gameboyCPU) setC(flag bool) {
+	if flag {
+		cpu.AF |= 16
+	} else {
+		cpu.AF &^= 16
+	}
+}
+
+func (cpu *gameboyCPU) getZ() bool {
+	return (cpu.AF>>7)&1 == 1
+}
+
+func (cpu *gameboyCPU) getN() bool {
+	return (cpu.AF>>6)&1 == 1
+}
+
+func (cpu *gameboyCPU) getH() bool {
+	return (cpu.AF>>5)&1 == 1
+}
+
+func (cpu *gameboyCPU) getC() bool {
+	return (cpu.AF>>4)&1 == 1
+}
+
+func (cpu *gameboyCPU) getAcc() uint8 {
+	return uint8((cpu.AF & 0xFF00) >> 8)
+}
+
+func (cpu *gameboyCPU) setAcc(value uint8) {
+	cpu.AF = uint16(value)<<8 | (cpu.AF & 0x00F0)
+}
+
+
+func boolToInt(flag bool) uint8 {
+	if flag {
+		return uint8(1)
+	} else {
+		return uint8(0)
+	}
+}
+
 func bitSet(data uint8, place uint8) bool {
 	//Checks if bit is set starting from the rhs
 	//I really wish I wrote this function earlier...
@@ -46,10 +112,12 @@ func opcodeFormat(patternArray [8]uint8, opcode uint8) bool {
 			if patternArray[i] == 1 {
 				if (opcode & (1 << (7 - i))) == 0 { //Checks if (7-ith) bit is not set
 					match = false
+					break
 				}
 			} else if patternArray[i] == 0 {
 				if (opcode & (1 << (7 - i))) > 0 { //Checks if (7-ith) bit is not set
 					match = false
+					break
 				}
 			}
 		}

@@ -27,7 +27,6 @@ func (cpu *gameboyCPU) ISR() {
 	cpu.cycles += 20 //Take a total of 5 machine cycles
 }
 
-
 /*
 The general gist of handling these 5 interrupts are as follows.
 1) Disable interrupt request held in the IF register
