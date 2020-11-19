@@ -131,42 +131,53 @@ func (cpu *gameboyCPU) initMaps() {
 	}
 }
 
-func initCPU(gb *gameboy) *gameboyCPU {
+func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	cpu := new(gameboyCPU)
 	cpu.gb = gb
 	cpu.initMaps()
-	cpu.skipBootrom()
+	if skipBootrom {
+		cpu.skipBootrom()
+	}
 	cpu.gb.mmu.writebyte(0xFF44, 0x90) //Temporary MMIO stub
 
 	return cpu
 }
 
 func (cpu *gameboyCPU) cycle() {
-	/*
-		if cpu.cycles == 0 {
-			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
-			cpu.PC++
+	//Run one cycle of the gameboy's cpu
 
-			if fetchedInstruction == 0xCB {
-				//add cycles for cb
-				cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
-			} else {
-				//add cycles for regular instruction
-				cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
-			}
-
-			cpu.decodeAndExecute(fetchedInstruction)
-
-		}
-		cpu.cycles-- */
+	//Handle interrupts
 
 	if cpu.IME {
 		cpu.ISR()
 	}
-	fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
-	cpu.PC++
-	cpu.decodeAndExecute(fetchedInstruction)
 
+	if cpu.cycles == 0 {
+		fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
+		cpu.PC++
+
+		if fetchedInstruction == 0xCB {
+			//add cycles for cb
+			cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
+		} else {
+			//add cycles for regular instruction
+			cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
+		}
+
+		cpu.decodeAndExecute(fetchedInstruction)
+
+	}
+
+	cpu.cycles--
+
+	/*
+		if cpu.IME {
+			cpu.ISR()
+		}
+		fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
+		cpu.PC++
+		cpu.decodeAndExecute(fetchedInstruction)
+	*/
 }
 
 func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
@@ -275,11 +286,11 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	} else if opcode == 0xE8 {
 		//ADD SP,i8
 		signedValue := cpu.d8()
-		cpu.setH( ((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
-		cpu.setC( (uint16(cpu.SP&0xFF)+uint16(signedValue)) > 0xFF)
+		cpu.setH(((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
+		cpu.setC((uint16(cpu.SP&0xFF) + uint16(signedValue)) > 0xFF)
 		cpu.SP = addSigned(cpu.SP, signedValue)
-		cpu.setZ( false)
-		cpu.setN( false)
+		cpu.setZ(false)
+		cpu.setN(false)
 
 	} else if opcode == 0xF0 {
 		//LD A, (0xFF00 + u8)
@@ -288,15 +299,15 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 	} else if opcode == 0xF8 {
 		//LD HL, SP + i8
 		signedValue := cpu.d8()
-		cpu.setH( ((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
-		cpu.setC( (uint16(cpu.SP&0xFF)+uint16(signedValue)) > 0xFF)
+		cpu.setH(((cpu.SP&0x0F)+(uint16(signedValue)&0x0F))&0x10 == 0x10)
+		cpu.setC((uint16(cpu.SP&0xFF) + uint16(signedValue)) > 0xFF)
 		cpu.HL = addSigned(cpu.SP, signedValue)
-		cpu.setZ( false)
-		cpu.setN( false)
+		cpu.setZ(false)
+		cpu.setN(false)
 
 	} else if opcodeFormat([8]uint8{1, 1, 2, 2, 0, 0, 0, 1}, opcode) {
 		//POP r16 (group 3)
-		register := opcode>>4&0x03
+		register := opcode >> 4 & 0x03
 		*cpu.r16group3[register] = cpu.POP()
 		if register == 3 {
 			cpu.AF &= 0xFFF0 //Always set lower 4 bits of AF to 0
@@ -352,19 +363,19 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		//CB prefix
 		opcode = cpu.gb.mmu.readbyte(cpu.PC) //update opcode
 		opcodeType := opcode >> 6
-		if opcodeType == 0{
+		if opcodeType == 0 {
 			//Shifts/Rotates
 			cpu.opTable3[(opcode>>3)&0x07](opcode & 0x7)
 
-		} else if opcodeType == 1{
+		} else if opcodeType == 1 {
 			//BIT bit, r8
 			cpu.BIT(opcode&0x7, (opcode>>3)&0x7)
 
-		} else if opcodeType == 2{
+		} else if opcodeType == 2 {
 			//RES bit, r8
 			cpu.RES(opcode&0x7, (opcode>>3)&0x7)
 
-		} else if opcodeType == 3{
+		} else if opcodeType == 3 {
 			//SET bit, r8
 			cpu.SET(opcode&0x7, (opcode>>3)&0x7)
 		}
@@ -404,7 +415,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.RST(opcode & 0x38)
 
 	} else {
-		println("ILLEGAL OPCODE ", opcode)
+		cpu.gb.debug.printConsole("ILLEGAL OPCODE!\n", "green")
 	}
 
 }

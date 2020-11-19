@@ -1,8 +1,7 @@
 package main
 
-import (
+import ()
 
-)
 //Addressing modes
 func (cpu *gameboyCPU) d8() uint8 {
 	immediateData := cpu.gb.mmu.readbyte(cpu.PC)
@@ -19,8 +18,8 @@ func (cpu *gameboyCPU) d16() uint16 {
 }
 
 //OPCODES
-//Wonderful explanation for half carry flags at https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 
+//8 BIT ARITHMETIC
 func (cpu *gameboyCPU) INC(opcode uint8) {
 	cpu.setH((((cpu.r8Read[opcode]()&0x0F)+(1))&0x10 == 0x10))
 	cpu.r8Write[opcode](cpu.r8Read[opcode]() + 1)
@@ -195,7 +194,7 @@ func (cpu *gameboyCPU) SCF() {
 	cpu.setC(true)
 }
 
-//JUMP OPCODES--------------------------
+//PROGRAM FLOW OPCODES--------------------------
 func (cpu *gameboyCPU) PUSH(data uint16) {
 	//Stack progresses downwards
 	cpu.SP -= 2

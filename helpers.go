@@ -1,8 +1,6 @@
 package main
 
-import (
-
-)
+import ()
 
 func checkErr(err error, errormsg string) {
 	if err != nil {
@@ -66,7 +64,6 @@ func (cpu *gameboyCPU) getAcc() uint8 {
 func (cpu *gameboyCPU) setAcc(value uint8) {
 	cpu.AF = uint16(value)<<8 | (cpu.AF & 0x00F0)
 }
-
 
 func boolToInt(flag bool) uint8 {
 	if flag {
