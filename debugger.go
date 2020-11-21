@@ -43,10 +43,10 @@ func (debug *debugger) displayLogo() {
 	for _, line := range logo {
 		debug.printConsole(line+"\n", "magenta")
 	}
-	debug.printConsole("\n", "green")
-	debug.printConsole("Written by Uzman Zawahir", "green")
-	debug.printConsole("\n", "green")
-	debug.printConsole("\n", "green")
+	debug.printConsole("\n", "cyan")
+	debug.printConsole("Written by Uzman Zawahir", "cyan")
+	debug.printConsole("\n", "cyan")
+	debug.printConsole("\n", "cyan")
 }
 
 func initDebugger(gb *gameboy, isLogging bool) *debugger {
@@ -98,18 +98,18 @@ func (debug *debugger) updateDebugInformation() {
 	//Basically line by line updates
 
 	debugCPU := make([]string, 0)
-	debugCPU = append(debugCPU, fmt.Sprintf("\n [PC](fg:green) = [$%04X](fg:yellow)", debug.gb.cpu.PC))
-	debugCPU = append(debugCPU, fmt.Sprintf(" [SP](fg:green) = [$%04X](fg:yellow)\n", debug.gb.cpu.SP))
+	debugCPU = append(debugCPU, fmt.Sprintf("\n [PC](fg:cyan) = [$%04X](fg:yellow)", debug.gb.cpu.PC))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [SP](fg:cyan) = [$%04X](fg:yellow)\n", debug.gb.cpu.SP))
 	debugCPU = append(debugCPU, "[------------------------\n](fg:cyan)")
-	debugCPU = append(debugCPU, fmt.Sprintf(" [A](fg:green) = [$%02X](fg:yellow)     [F](fg:green) = [$%02X](fg:yellow)\n", debug.gb.cpu.AF>>8, debug.gb.cpu.AF&0xFF))
-	debugCPU = append(debugCPU, fmt.Sprintf(" [B](fg:green) = [$%02X](fg:yellow)     [C](fg:green) = [$%02X](fg:yellow)\n", debug.gb.cpu.BC>>8, debug.gb.cpu.BC&0xFF))
-	debugCPU = append(debugCPU, fmt.Sprintf(" [D](fg:green) = [$%02X](fg:yellow)     [E](fg:green) = [$%02X](fg:yellow)\n", debug.gb.cpu.DE>>8, debug.gb.cpu.DE&0xFF))
-	debugCPU = append(debugCPU, fmt.Sprintf(" [H](fg:green) = [$%02X](fg:yellow)     [L](fg:green) = [$%02X](fg:yellow)\n", debug.gb.cpu.HL>>8, debug.gb.cpu.HL&0xFF))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [A](fg:cyan) = [$%02X](fg:yellow)     [F](fg:cyan) = [$%02X](fg:yellow)\n", debug.gb.cpu.AF>>8, debug.gb.cpu.AF&0xFF))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [B](fg:cyan) = [$%02X](fg:yellow)     [C](fg:cyan) = [$%02X](fg:yellow)\n", debug.gb.cpu.BC>>8, debug.gb.cpu.BC&0xFF))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [D](fg:cyan) = [$%02X](fg:yellow)     [E](fg:cyan) = [$%02X](fg:yellow)\n", debug.gb.cpu.DE>>8, debug.gb.cpu.DE&0xFF))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [H](fg:cyan) = [$%02X](fg:yellow)     [L](fg:cyan) = [$%02X](fg:yellow)\n", debug.gb.cpu.HL>>8, debug.gb.cpu.HL&0xFF))
 	debugCPU = append(debugCPU, "[\n------------------------\n](fg:cyan)")
-	debugCPU = append(debugCPU, fmt.Sprintf(" [Z](fg:green) = [%d](fg:yellow)       [N](fg:green) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getZ()), boolToInt(debug.gb.cpu.getN())))
-	debugCPU = append(debugCPU, fmt.Sprintf(" [H](fg:green) = [%d](fg:yellow)       [C](fg:green) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getH()), boolToInt(debug.gb.cpu.getC())))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [Z](fg:cyan) = [%d](fg:yellow)       [N](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getZ()), boolToInt(debug.gb.cpu.getN())))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [H](fg:cyan) = [%d](fg:yellow)       [C](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getH()), boolToInt(debug.gb.cpu.getC())))
 	debugCPU = append(debugCPU, "[\n\n------------------------\n](fg:cyan)")
-	debugCPU = append(debugCPU, fmt.Sprintf(" [IME](fg:green) = [%d](fg:yellow)     [HALT](fg:green) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.IME), boolToInt(debug.gb.cpu.HALT)))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [IME](fg:cyan) = [%d](fg:yellow)     [HALT](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.IME), boolToInt(debug.gb.cpu.HALT)))
 
 	debug.cpuState.Text = strings.Join(debugCPU, "\n")
 	debug.consoleOut.Text = strings.Join(debug.console, "")

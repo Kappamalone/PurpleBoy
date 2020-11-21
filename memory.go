@@ -30,7 +30,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if addr >= 0x8000 && addr <= 0x9FFF {
 		//8KB VRAM
-		mmu.gb.ppu.VRAM[addr - 0x8000] = data
+		mmu.gb.ppu.VRAM[addr-0x8000] = data
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -46,7 +46,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if addr >= 0xE000 && addr <= 0xFDFF {
 		//ECHO RAM of C000~DDFF
-		mmu.ram[addr - 0x2000] = data
+		mmu.ram[addr-0x2000] = data
 
 	} else if addr >= 0xFE00 && addr <= 0xFE9F {
 		//OAM
@@ -55,7 +55,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
 		//Not usable
 		if isDebugging {
-			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n","green")
+			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
 		}
 
 	} else if addr >= 0xFF00 && addr <= 0xFF7F {
@@ -74,7 +74,6 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 }
 
 func (mmu *memory) readbyte(addr uint16) uint8 {
-	//Time to do some cool mmu stuff
 
 	var readByte uint8 = 0
 
@@ -88,7 +87,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 
 	} else if addr >= 0x8000 && addr <= 0x9FFF {
 		//8KB VRAM
-		readByte = mmu.gb.ppu.VRAM[addr - 0x8000]
+		readByte = mmu.gb.ppu.VRAM[addr-0x8000]
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -104,7 +103,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 
 	} else if addr >= 0xE000 && addr <= 0xFDFF {
 		//ECHO RAM of C000~DDFF
-		readByte = mmu.ram[addr - 0x2000]
+		readByte = mmu.ram[addr-0x2000]
 
 	} else if addr >= 0xFE00 && addr <= 0xFE9F {
 		//OAM
@@ -113,7 +112,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
 		//Not usable
 		if isDebugging {
-			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n","green")
+			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
 		}
 
 	} else if addr >= 0xFF00 && addr <= 0xFF7F {
@@ -129,13 +128,12 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		readByte = mmu.ram[0xFFFF]
 	}
 
-	return readByte 
-
+	return readByte
 
 }
 
 func (mmu *memory) readWord(addr uint16) uint16 {
-	//Account for low endianness
+	//Account for low endianness and read lsb first
 	low := mmu.readbyte(addr)
 	hi := mmu.readbyte(addr + 1)
 	return uint16(hi)<<8 | uint16(low)
@@ -143,8 +141,10 @@ func (mmu *memory) readWord(addr uint16) uint16 {
 
 func (mmu *memory) writeword(addr uint16, data uint16) {
 	//Account for low endian and store lsb first
-	mmu.ram[addr] = uint8(data & 0x00FF)
-	mmu.ram[addr+1] = uint8((data & 0xFF00) >> 8)
+	low := uint8(data & 0x00FF)
+	hi := uint8((data & 0xFF00) >> 8)
+	mmu.writebyte(addr, low)
+	mmu.writebyte(addr+1, hi)
 }
 
 //ROM LOADING--------------------------

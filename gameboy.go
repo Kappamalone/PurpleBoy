@@ -36,38 +36,55 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 
 var (
 	cfile       string = "10-bit ops"
-	skipBootrom bool   = true
+	skipBootrom bool   = false
 	isDebugging bool   = true
 	isLogging   bool   = false
 )
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
-	gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
+	if !skipBootrom {
+		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
+	} else {
+		gb.cpu.skipBootrom()
+	}
 	gb.mmu.loadBlaarg(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+	//gb.mmu.loadBlaarg("roms/gameroms/tetris.gb")
 
-	defer ui.Close()
+	if isDebugging {
+		defer ui.Close()
+		defer gb.ppu.tileWindow.Destroy()
+		defer gb.ppu.tileRenderer.Destroy()
+	}
 	defer sdl.Quit()
 	defer gb.ppu.window.Destroy()
 	defer gb.ppu.renderer.Destroy()
 
 	ticker := time.NewTicker(16 * time.Millisecond)
+
+	//One frame
 	for range ticker.C {
-		//Use the emitted tick from the ticker to run 1/60th of the required frames every 1/60th of a second
+		gb.ppu.drawFrame()
 		if isDebugging {
 			gb.debug.updateDebugInformation()
 			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
 		}
 
 		for i := 0; i < cyclesPerFrame; i++ {
-			gb.cpu.cycle()
+			//CPU is clocked at 4.2MHZ
+			//PPU is cloked at 2.1MHZ
+			gb.cpu.tick()
+			if i%2 == 0 {
+				gb.ppu.tick()
+			}
 
-			if gb.mmu.ram[0xFF02] == 0x81 {
-				gb.debug.printConsole(fmt.Sprintf("%c", gb.mmu.ram[0xFF01]),"green")
-				gb.mmu.ram[0xFF02] = 0x00
+			if isDebugging {
+				if gb.mmu.ram[0xFF02] == 0x81 {
+					gb.debug.printConsole(fmt.Sprintf("%c", gb.mmu.ram[0xFF01]), "cyan")
+					gb.mmu.ram[0xFF02] = 0x00
+				}
 			}
 		}
-
 		if handleInput() {
 			ticker.Stop() //Stop ticker to exit program
 			break

@@ -143,8 +143,8 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	return cpu
 }
 
-func (cpu *gameboyCPU) cycle() {
-	//Run one cycle of the gameboy's cpu
+func (cpu *gameboyCPU) tick() {
+	//Run one tick of the gameboy's cpu
 
 	//Handle interrupts
 
@@ -169,15 +169,6 @@ func (cpu *gameboyCPU) cycle() {
 	}
 
 	cpu.cycles--
-
-	/*
-		if cpu.IME {
-			cpu.ISR()
-		}
-		fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
-		cpu.PC++
-		cpu.decodeAndExecute(fetchedInstruction)
-	*/
 }
 
 func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
@@ -415,7 +406,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.RST(opcode & 0x38)
 
 	} else {
-		cpu.gb.debug.printConsole("ILLEGAL OPCODE!\n", "green")
+		cpu.gb.debug.printConsole("ILLEGAL OPCODE!\n", "cyan")
 	}
 
 }
