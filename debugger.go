@@ -70,7 +70,7 @@ func initDebugger(gb *gameboy, isLogging bool) *debugger {
 
 func initLogging() {
 	//Setup logging
-	file, err := os.OpenFile(fmt.Sprintf("logfiles/cpu/%s/%s.txt", cfile, cfile), os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("logfiles/log.txt", os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,6 +81,15 @@ func initLogging() {
 func (debug *debugger) logTrace() {
 	log.Printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%02X %02X %02X %02X)", debug.gb.cpu.getAcc(), debug.gb.cpu.AF&0x00FF, debug.gb.cpu.r8Read[0](), debug.gb.cpu.r8Read[1](), debug.gb.cpu.r8Read[2](), debug.gb.cpu.r8Read[3](), debug.gb.cpu.r8Read[4](), debug.gb.cpu.r8Read[5](), debug.gb.cpu.SP, debug.gb.cpu.PC, debug.gb.mmu.ram[debug.gb.cpu.PC], debug.gb.mmu.ram[debug.gb.cpu.PC+1], debug.gb.mmu.ram[debug.gb.cpu.PC+2], debug.gb.mmu.ram[debug.gb.cpu.PC+3])
 }
+
+func (debug *debugger) logVRAM() {
+	for i := 0; i < len(debug.gb.ppu.VRAM); i += 16 {
+		log.Printf("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",debug.gb.ppu.VRAM[i],debug.gb.ppu.VRAM[i+1],debug.gb.ppu.VRAM[i+2],debug.gb.ppu.VRAM[i+3],
+																	 								 debug.gb.ppu.VRAM[i+4],debug.gb.ppu.VRAM[i+5],debug.gb.ppu.VRAM[i+6],debug.gb.ppu.VRAM[i+7],
+																									 debug.gb.ppu.VRAM[i+8],debug.gb.ppu.VRAM[i+9],debug.gb.ppu.VRAM[i+10],debug.gb.ppu.VRAM[i+11],
+																									 debug.gb.ppu.VRAM[i+12],debug.gb.ppu.VRAM[i+13],debug.gb.ppu.VRAM[i+14],debug.gb.ppu.VRAM[i+15])
+		}
+	}
 
 //Write debug windows down here
 

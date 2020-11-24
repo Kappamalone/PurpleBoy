@@ -38,18 +38,18 @@ var (
 	cfile       string = "10-bit ops"
 	skipBootrom bool   = false
 	isDebugging bool   = true
-	isLogging   bool   = false
+	isLogging   bool   = true
 )
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
 	if !skipBootrom {
 		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
+		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 	} else {
 		gb.cpu.skipBootrom()
+		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 	}
-	gb.mmu.loadBlaarg(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-	//gb.mmu.loadBlaarg("roms/gameroms/tetris.gb")
 
 	if isDebugging {
 		defer ui.Close()
@@ -65,6 +65,8 @@ func main() {
 	//One frame
 	for range ticker.C {
 		gb.ppu.drawFrame()
+		gb.ppu.displayTileset()
+
 		if isDebugging {
 			gb.debug.updateDebugInformation()
 			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
@@ -72,7 +74,7 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//CPU is clocked at 4.2MHZ
-			//PPU is cloked at 2.1MHZ
+			//PPU is cloked at 2.1MH
 			gb.cpu.tick()
 			if i%2 == 0 {
 				gb.ppu.tick()

@@ -30,7 +30,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if addr >= 0x8000 && addr <= 0x9FFF {
 		//8KB VRAM
-		mmu.gb.ppu.VRAM[addr-0x8000] = data
+		mmu.gb.ppu.VRAM[addr - 0x8000] = data
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -158,20 +158,24 @@ func (mmu *memory) loadBootrom(path string) {
 
 }
 
-func (mmu *memory) loadBlaarg(path string) {
+func (mmu *memory) tempLoadRom(path string) {
+	file, err := ioutil.ReadFile(path)
+	checkErr(err, "Could not find rom specified!")
+
+	//Will probably change later when implementing catridge
+	//Basically we're exposing part of the cartridge rom to the 
+	//Nintendo boot up sequence so that the anti-piracy checksums don't
+	//Freeze the gameboy
+	for i := 0; i < len(file) - 0x100; i++ {
+		mmu.ram[0x100+i] = file[i+0x100]
+	}
+}
+
+func (mmu *memory) loadFullRom(path string) {
 	file, err := ioutil.ReadFile(path)
 	checkErr(err, "Could not find rom specified!")
 
 	for i := 0; i < len(file); i++ {
 		mmu.ram[i] = file[i]
-	}
-}
-
-func (mmu *memory) loadRom(path string) {
-	file, err := ioutil.ReadFile(path)
-	checkErr(err, "Could not find rom specified!")
-
-	for i := 0; i < len(file); i++ {
-		mmu.ram[0x100+i] = file[i]
 	}
 }

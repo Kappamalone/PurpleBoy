@@ -8,11 +8,13 @@ const (
 	//Screen specs
 	screenWidth  = 160
 	screenHeight = 144
-	tilewindowWidth = 256
-	tilewindowHeight = 256
 	windowScale  = 5
 
-	//Gameboy colors
+	tilewindowWidth  = 128
+	tilewindowHeight = 192
+	tilewindowScale  = 4
+
+	//Gameboy colours
 	dark   = 0x2c2137
 	ldark  = 0x764462
 	lwhite = 0xedb4a1
@@ -20,11 +22,13 @@ const (
 )
 
 var (
+	//colours = [4]uint32{dark,white,dark,dark}
 	colours = [4]uint32{white, lwhite, ldark, dark}
+	//colours = [4]uint32{dark,ldark,lwhite,white}
 )
 
-func setRenderColor(renderer *sdl.Renderer, color uint32, alpha uint8) {
-	renderer.SetDrawColor(uint8((color&0xFF0000)>>16), uint8((color&0x00FF00)>>8), uint8((color & 0x0000FF)), alpha)
+func setRendercolour(renderer *sdl.Renderer, colour uint32, alpha uint8) {
+	renderer.SetDrawColor(uint8((colour&0xFF0000)>>16), uint8((colour&0x00FF00)>>8), uint8((colour & 0x0000FF)), alpha)
 }
 
 //PPU is the pixel processing unit of the system
@@ -33,14 +37,14 @@ type PPU struct {
 	gb   *gameboy
 	VRAM [8 * 1024]uint8
 
-	window   *sdl.Window
-	renderer *sdl.Renderer
+	window      *sdl.Window
+	renderer    *sdl.Renderer
 	texture     *sdl.Texture
 	frameBuffer []uint8
 
-	tileWindow *sdl.Window
-	tileRenderer *sdl.Renderer
-	tileTexture *sdl.Texture
+	tileWindow      *sdl.Window
+	tileRenderer    *sdl.Renderer
+	tileTexture     *sdl.Texture
 	tileframeBuffer []uint8
 
 	dotClock int //Used to determine what the PPU should be doing
@@ -49,19 +53,18 @@ type PPU struct {
 func initPPU(gb *gameboy) *PPU {
 	ppu := new(PPU)
 	ppu.gb = gb
-	//ppu.window, ppu.renderer = initSDL()
+	ppu.window, ppu.renderer = initSDL()
 	if isDebugging {
-		ppu.tileWindow,ppu.tileRenderer = initSDLDebugging()
+		ppu.tileWindow, ppu.tileRenderer = initSDLDebugging()
+		ppu.tileframeBuffer = make([]uint8, tilewindowWidth*tilewindowHeight*4) //RGBA32 uses 4 bytes per pixel
+		ppu.tileTexture, _ = ppu.tileRenderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, tilewindowWidth, tilewindowHeight)
+		ppu.tileRenderer.SetScale(tilewindowScale, tilewindowScale)
 	}
 
-	//ppu.renderer.SetScale(windowScale, windowScale)
-	//ppu.frameBuffer = make([]uint8, screenWidth*screenHeight*4) //RGBA32
-	//ppu.texture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, screenWidth, screenHeight)
-	//ppu.clearScreen()
-
-	ppu.tileframeBuffer = make([]uint8,tilewindowWidth * tilewindowHeight * 4) //RGBA32
-	ppu.tileTexture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32),sdl.TEXTUREACCESS_STREAMING,tilewindowWidth,tilewindowHeight)
-	ppu.displayTileset()
+	ppu.renderer.SetScale(windowScale, windowScale)
+	ppu.frameBuffer = make([]uint8, screenWidth*screenHeight*4) //RGBA32 uses 4 bytes per pixel
+	ppu.texture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, screenWidth, screenHeight)
+	ppu.clearScreen()
 
 	return ppu
 }
@@ -70,11 +73,11 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	//Does the necessary setup for the SDL library
 
 	//Initialise SDL
-	err := sdl.Init(sdl.INIT_EVERYTHING)
+	err := sdl.Init(sdl.INIT_VIDEO)
 	checkErr(err, "SDL initialisation error")
 
 	//Create window
-	window, err := sdl.CreateWindow("Purpleboy!", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow("Purpleboy!", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Window creation error")
 	window.SetResizable(true)
 
@@ -86,45 +89,45 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 
 }
 
-func initSDLDebugging() (*sdl.Window,*sdl.Renderer){
-	//Initialises the required windows for debugging purposes 
+func initSDLDebugging() (*sdl.Window, *sdl.Renderer) {
+	//Initialises the required windows for debugging purposes
 
-	tileWindow,err := sdl.CreateWindow("Debug",sdl.WINDOWPOS_CENTERED,sdl.WINDOWPOS_CENTERED,tilewindowHeight,tilewindowWidth,sdl.WINDOW_SHOWN)
+	tileWindow, err := sdl.CreateWindow("Debug", sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Debug window creation error")
+	tileWindow.SetResizable(true)
 
-	tileRenderer, err := sdl.CreateRenderer(tileWindow,-1,sdl.RENDERER_ACCELERATED)
+	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
 	checkErr(err, "Debug renderer creation error")
 
-	return tileWindow,tileRenderer
-		
+	return tileWindow, tileRenderer
+
 }
 
 func (ppu *PPU) tick() {
 	//PPU runs at 2.1MHZ, so this tick function is called every 2 T-cycles
 	/*
 
-	LCDC := ppu.gb.mmu.readbyte(0xFF40)
-	//LCDSTAT := ppu.gb.mmu.readbyte(0xFF41)
+		LCDC := ppu.gb.mmu.readbyte(0xFF40)
+		//LCDSTAT := ppu.gb.mmu.readbyte(0xFF41)
 
-	displayEnable := bitSet(LCDC, 7)
-	windowTileMap := 0x9800
-	if bitSet(LCDC, 6) {
-		windowTileMap = 0x9C00
-	}
-	windowDisplayEnable := bitSet(LCDC, 5)
-	bgwTileData := 0x9000
-	if bitSet(LCDC, 4) {
-		bgwTileData = 0x8000
-	}
-	bgTileMap := 0x9800
-	if bitSet(LCDC,3) {
-		bgTileMap = 0x9C00
-	}
-	//spriteSize := bitset(LCDC,2)
-	//spriteEnable := bitset(LCDC,1)
-	//bgwDisplayPriority := bitset(LCDC,0)
+		displayEnable := bitSet(LCDC, 7)
+		windowTileMap := 0x9800
+		if bitSet(LCDC, 6) {
+			windowTileMap = 0x9C00
+		}
+		windowDisplayEnable := bitSet(LCDC, 5)
+		bgwTileData := 0x9000
+		if bitSet(LCDC, 4) {
+			bgwTileData = 0x8000
+		}
+		bgTileMap := 0x9800
+		if bitSet(LCDC,3) {
+			bgTileMap = 0x9C00
+		}
+		//spriteSize := bitset(LCDC,2)
+		//spriteEnable := bitset(LCDC,1)
+		//bgwDisplayPriority := bitset(LCDC,0)
 	*/
-	
 
 	ppu.dotClock++
 	if ppu.dotClock == 456 {
@@ -133,12 +136,11 @@ func (ppu *PPU) tick() {
 
 }
 
-//SDL Logic to draw frame buffer
-
-func (ppu *PPU) drawPixel(x int, y int, color uint32) {
-	ppu.frameBuffer[x*4+(y*4*screenWidth)] = uint8((color & 0xFF0000) >> 16)
-	ppu.frameBuffer[x*4+(y*4*screenWidth)+1] = uint8((color & 0xFF00) >> 8)
-	ppu.frameBuffer[x*4+(y*4*screenWidth)+2] = uint8(color & 0xFF)
+//SDL Helper functions
+func (ppu *PPU) drawPixel(x int, y int, colour uint32) {
+	ppu.frameBuffer[x*4+(y*4*screenWidth)] = uint8((colour & 0xFF0000) >> 16)
+	ppu.frameBuffer[x*4+(y*4*screenWidth)+1] = uint8((colour & 0xFF00) >> 8)
+	ppu.frameBuffer[x*4+(y*4*screenWidth)+2] = uint8(colour & 0xFF)
 	ppu.frameBuffer[x*4+(y*4*screenWidth)+3] = 0xFF
 }
 
@@ -163,34 +165,42 @@ func (ppu *PPU) clearScreen() {
 	ppu.renderer.Present()
 }
 
-func (ppu *PPU) drawTilePixel(place int, color uint32){
-	//I'm making a separate function altogether just to make the code easier 
-	//for me to read.
-	ppu.tileframeBuffer[place * 4] = uint8((color & 0xFF0000) >> 16)
-	ppu.tileframeBuffer[(place * 4) + 1] = uint8((color & 0xFF00) >> 8)
-	ppu.tileframeBuffer[(place * 4) + 2] = uint8(color & 0xFF)
-	ppu.tileframeBuffer[(place * 4) + 3] = 0xFF
+
+//I spent god knows how long getting this stuff to work...
+
+func (ppu *PPU) drawTilePixel(x int, y int, colour uint32) {
+	ppu.tileframeBuffer[x*4+(y*4*tilewindowWidth)] = uint8((colour & 0xFF0000) >> 16)
+	ppu.tileframeBuffer[x*4+(y*4*tilewindowWidth)+1] = uint8((colour & 0xFF00) >> 8)
+	ppu.tileframeBuffer[x*4+(y*4*tilewindowWidth)+2] = uint8(colour & 0xFF)
+	ppu.tileframeBuffer[x*4+(y*4*tilewindowWidth)+3] = 0xFF
+}
+
+func (ppu *PPU) drawTile(bitmap []uint8, tileCoord int) {
+	baseRow := (tileCoord / 16) * 8
+	baseCol := (tileCoord % 16) * 8
+	for row := 0; row < 8; row++ {
+		byte1 := bitmap[row * 2]
+		byte2 := bitmap[row * 2 + 1]
+		for col := 0; col < 8; col++ {
+			colour := ((byte2 >> (7-col) & 1) << 1) | (byte1 >> (7-col) & 1)
+			ppu.drawTilePixel(baseCol + col, baseRow + row, colours[colour])
+		}
+	}
 }
 
 func (ppu *PPU) displayTileset() {
+	//I ended up struggling here quite a bit because of a misunderstanding of how vram stores data
+	//It stores data in TILES, not as a row-by-row bitmap
+	for i := 0; i < 0x1800; i +=16 {
+		ppu.drawTile(ppu.VRAM[i:i+16],i/16)
+	}
+
+
 	ppu.tileRenderer.Clear()
-	/*
-	for i := 0; i < len(ppu.VRAM); i += 2 {
-		for colorVal := 0; colorVal < 8; colorVal++ {
-			//Get the color values from two bytes for one 8 bit row of pixels
-			colour := (ppu.VRAM[i] >> (7 - colorVal)) | (ppu.VRAM[i + 1] >> (7 - colorVal))
-			ppu.drawTilePixel(i,colours[colour])
-		}
-	}
-	*/
-	for i := 0; i < 256*256; i++ {
-		ppu.drawTilePixel(i,white)
-	}
 	ppu.tileTexture.Update(nil, ppu.tileframeBuffer, 4*tilewindowWidth)
 	ppu.tileRenderer.Copy(ppu.tileTexture, nil, nil)
 	ppu.tileRenderer.Present()
 }
-
 
 /*
 Some self documentation just to wrap my head around these ppu concepts:
