@@ -38,7 +38,7 @@ func (cpu *gameboyCPU) VBlank() {
 	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x01)
 	cpu.PC = 0x0040
 	cpu.IME = false
-	println("VBLANK")
+	cpu.gb.debug.printConsole("VBLANK", "cyan")
 }
 
 func (cpu *gameboyCPU) LCDSTAT() {
@@ -46,7 +46,7 @@ func (cpu *gameboyCPU) LCDSTAT() {
 	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x02)
 	cpu.PC = 0x0048
 	cpu.IME = false
-	println("LCD STAT")
+	cpu.gb.debug.printConsole("LCD STAT", "cyan")
 }
 
 func (cpu *gameboyCPU) TIMER() {
@@ -54,7 +54,7 @@ func (cpu *gameboyCPU) TIMER() {
 	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x04)
 	cpu.PC = 0x0050
 	cpu.IME = false
-	println("TIMER")
+	cpu.gb.debug.printConsole("TIMER", "cyan")
 }
 
 func (cpu *gameboyCPU) SERIAL() {
@@ -62,7 +62,7 @@ func (cpu *gameboyCPU) SERIAL() {
 	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x08)
 	cpu.PC = 0x0058
 	cpu.IME = false
-	println("SERIAL")
+	cpu.gb.debug.printConsole("SERIAL", "cyan")
 }
 
 func (cpu *gameboyCPU) JOYPAD() {
@@ -70,5 +70,5 @@ func (cpu *gameboyCPU) JOYPAD() {
 	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x10)
 	cpu.PC = 0x0060
 	cpu.IME = false
-	println("JOYPAD")
+	cpu.gb.debug.printConsole("JOYPAD", "cyan")
 }

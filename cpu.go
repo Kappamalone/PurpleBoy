@@ -155,10 +155,9 @@ func (cpu *gameboyCPU) tick() {
 	/*
 	if !skipBootrom {
 		if cpu.PC == 0x100 {
-			cpu.gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+			cpu.gb.mmu.loadFullRom(fullrom)
 		}
-	}
-	*/
+	}*/
 
 	//Handle interrupts
 	if cpu.IME {
@@ -166,10 +165,10 @@ func (cpu *gameboyCPU) tick() {
 	}
 
 	if cpu.PC == 0x100 {
-		//cpu.gb.debug.logVRAM()
 		cpu.gb.ppu.displayTileset()
+		cpu.gb.ppu.displayCurrTileMap()
 	}
-
+	
 	if cpu.cycles == 0 {
 		//if isLogging {cpu.gb.debug.logTrace()}
 

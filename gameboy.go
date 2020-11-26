@@ -35,22 +35,16 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	cfile       string = "10-bit ops"
+	cfile       string = "01-special"
 	skipBootrom bool   = false
 	isDebugging bool   = true
 	isLogging   bool   = true
+
+	fullrom     string = "roms/gameroms/tetris.gb"
 )
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
-	if !skipBootrom {
-		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
-		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-	} else {
-		gb.cpu.skipBootrom()
-		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-	}
-
 	if isDebugging {
 		defer ui.Close()
 		defer gb.ppu.tileWindow.Destroy()
@@ -60,16 +54,29 @@ func main() {
 	defer gb.ppu.window.Destroy()
 	defer gb.ppu.renderer.Destroy()
 
+	if !skipBootrom {
+		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
+		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+		//gb.mmu.tempLoadRom(fullrom)
+		
+	} else {
+		gb.cpu.skipBootrom()
+		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+		//gb.mmu.loadFullRom(fullrom)
+		gb.cpu.PC = 0x100
+	}
+
 	ticker := time.NewTicker(16 * time.Millisecond)
 
 	//One frame
 	for range ticker.C {
-		gb.ppu.drawFrame()
-		gb.ppu.displayTileset()
 
 		if isDebugging {
 			gb.debug.updateDebugInformation()
 			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
+
+			gb.ppu.displayTileset()
+			gb.ppu.displayCurrTileMap()
 		}
 
 		for i := 0; i < cyclesPerFrame; i++ {

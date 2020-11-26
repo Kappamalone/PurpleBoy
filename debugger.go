@@ -56,8 +56,8 @@ func initDebugger(gb *gameboy, isLogging bool) *debugger {
 	//Initialise termui
 	err := ui.Init()
 	checkErr(err, "Failed to intialise termui")
-	debug.cpuState = createWidget("[CPU STATE]", ui.ColorCyan, [4]int{0, 0, 26, 30})
-	debug.consoleOut = createWidget("[CONSOLE]", ui.ColorCyan, [4]int{0, 30, 150, 50})
+	debug.cpuState = createWidget("[CPU STATE]", ui.ColorCyan, [4]int{0, 0, 26, 33})
+	debug.consoleOut = createWidget("[CONSOLE]", ui.ColorCyan, [4]int{0, 33, 163, 52})
 	debug.displayLogo()
 
 	//Create a file for logging
