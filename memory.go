@@ -7,6 +7,8 @@ import (
 type memory struct {
 	gb  *gameboy
 	ram [1024 * 64]uint8
+
+	OAM [0x100]uint8 //Object attribute memory aka sprite data
 }
 
 func initMemory(gb *gameboy) *memory {
@@ -20,6 +22,8 @@ func initMemory(gb *gameboy) *memory {
 func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//Implements the memory map from the pandocs
 
+	//TODO: make sure to return ppu mode for 0xFF41
+
 	if addr >= 0x0000 && addr <= 0x3FFF {
 		//16KB ROM Bank 00
 		mmu.ram[addr] = data
@@ -28,9 +32,9 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		//16KB ROM Bank 01~NN
 		mmu.ram[addr] = data
 
-	} else if addr >= 0x8000 && addr <= 0x9FFF {
+	} else if addr >= 0x8000 && addr <= 0x9FFF && mmu.gb.ppu.mode != 3 {
 		//8KB VRAM
-		mmu.gb.ppu.VRAM[addr - 0x8000] = data
+		mmu.gb.ppu.VRAM[addr-0x8000] = data
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -48,9 +52,9 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		//ECHO RAM of C000~DDFF
 		mmu.ram[addr-0x2000] = data
 
-	} else if addr >= 0xFE00 && addr <= 0xFE9F {
+	} else if (addr >= 0xFE00 && addr <= 0xFE9F) && (mmu.gb.ppu.mode != 2 && mmu.gb.ppu.mode != 3) { //Tidy this up later!
 		//OAM
-		mmu.ram[addr] = data
+		mmu.OAM[addr-0xFE00] = data
 
 	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
 		//Not usable
@@ -60,6 +64,18 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if addr >= 0xFF00 && addr <= 0xFF7F {
 		//IO Registers
+		//FF42,FF43 SCY, SCX
+		//FF44 LY
+		//FF45 LYC
+		//FF4A, FF4B WY, WX
+		switch addr {
+			case 0xFF42: mmu.gb.ppu.SCY = data
+			case 0xFF43: mmu.gb.ppu.SCX = data
+			case 0xFF44: mmu.gb.ppu.LY = data
+			case 0xFF45: mmu.gb.ppu.LYC = data
+			case 0xFF4A: mmu.gb.ppu.WY = data
+			case 0xFF4B: mmu.gb.ppu.WX = data
+		}
 		mmu.ram[addr] = data
 
 	} else if addr >= 0xFF80 && addr <= 0xFFFE {
@@ -85,7 +101,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		//16KB ROM Bank 01~NN
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0x8000 && addr <= 0x9FFF {
+	} else if (addr >= 0x8000 && addr <= 0x9FFF) && mmu.gb.ppu.mode != 3 {
 		//8KB VRAM
 		readByte = mmu.gb.ppu.VRAM[addr-0x8000]
 
@@ -105,9 +121,9 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		//ECHO RAM of C000~DDFF
 		readByte = mmu.ram[addr-0x2000]
 
-	} else if addr >= 0xFE00 && addr <= 0xFE9F {
+	} else if addr >= 0xFE00 && addr <= 0xFE9F && (mmu.gb.ppu.mode != 2 && mmu.gb.ppu.mode != 3) { //Tidy this up later!
 		//OAM
-		readByte = mmu.ram[addr]
+		readByte = mmu.OAM[addr-0xFE00]
 
 	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
 		//Not usable
@@ -117,6 +133,18 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 
 	} else if addr >= 0xFF00 && addr <= 0xFF7F {
 		//IO Registers
+		//FF42,FF43 SCY, SCX
+		//FF44 LY
+		//FF45 LYC
+		//FF4A, FF4B WY, WX
+		switch addr {
+		case 0xFF42: readByte = mmu.gb.ppu.SCY
+		case 0xFF43: readByte = mmu.gb.ppu.SCX
+		case 0xFF44: readByte = mmu.gb.ppu.LY
+		case 0xFF45: readByte = mmu.gb.ppu.LYC
+		case 0xFF4A: readByte = mmu.gb.ppu.WY
+		case 0xFF4B: readByte = mmu.gb.ppu.WX
+		}
 		readByte = mmu.ram[addr]
 
 	} else if addr >= 0xFF80 && addr <= 0xFFFE {
@@ -163,10 +191,10 @@ func (mmu *memory) tempLoadRom(path string) {
 	checkErr(err, "Could not find rom specified!")
 
 	//Will probably change later when implementing catridge
-	//Basically we're exposing part of the cartridge rom to the 
+	//Basically we're exposing part of the cartridge rom to the
 	//Nintendo boot up sequence so that the anti-piracy checksums don't
 	//Freeze the gameboy
-	for i := 0; i < len(file) - 0x100; i++ {
+	for i := 0; i < len(file)-0x100; i++ {
 		mmu.ram[0x100+i] = file[i+0x100]
 	}
 }

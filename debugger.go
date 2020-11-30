@@ -84,12 +84,12 @@ func (debug *debugger) logTrace() {
 
 func (debug *debugger) logVRAM() {
 	for i := 0; i < len(debug.gb.ppu.VRAM); i += 16 {
-		log.Printf("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",debug.gb.ppu.VRAM[i],debug.gb.ppu.VRAM[i+1],debug.gb.ppu.VRAM[i+2],debug.gb.ppu.VRAM[i+3],
-																	 								 debug.gb.ppu.VRAM[i+4],debug.gb.ppu.VRAM[i+5],debug.gb.ppu.VRAM[i+6],debug.gb.ppu.VRAM[i+7],
-																									 debug.gb.ppu.VRAM[i+8],debug.gb.ppu.VRAM[i+9],debug.gb.ppu.VRAM[i+10],debug.gb.ppu.VRAM[i+11],
-																									 debug.gb.ppu.VRAM[i+12],debug.gb.ppu.VRAM[i+13],debug.gb.ppu.VRAM[i+14],debug.gb.ppu.VRAM[i+15])
-		}
+		log.Printf("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X", debug.gb.ppu.VRAM[i], debug.gb.ppu.VRAM[i+1], debug.gb.ppu.VRAM[i+2], debug.gb.ppu.VRAM[i+3],
+			debug.gb.ppu.VRAM[i+4], debug.gb.ppu.VRAM[i+5], debug.gb.ppu.VRAM[i+6], debug.gb.ppu.VRAM[i+7],
+			debug.gb.ppu.VRAM[i+8], debug.gb.ppu.VRAM[i+9], debug.gb.ppu.VRAM[i+10], debug.gb.ppu.VRAM[i+11],
+			debug.gb.ppu.VRAM[i+12], debug.gb.ppu.VRAM[i+13], debug.gb.ppu.VRAM[i+14], debug.gb.ppu.VRAM[i+15])
 	}
+}
 
 //Write debug windows down here
 

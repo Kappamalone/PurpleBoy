@@ -55,6 +55,19 @@ type PPU struct {
 	tileTexture     *sdl.Texture
 	tileFramebuffer []uint8
 
+	//PPU internal variables
+	SCX uint8
+	SCY uint8
+
+	LY uint8 //Used to hold line number that
+	LYC uint8
+
+	WX uint8 //Remember this is window position - 7
+	WY uint8
+
+	//Mode of the PPU
+	mode int
+
 	dotClock int //Used to determine what the PPU should be doing
 }
 
@@ -77,7 +90,8 @@ func initPPU(gb *gameboy) *PPU {
 	ppu.renderer.SetScale(windowScale, windowScale)
 	ppu.frameBuffer = make([]uint8, screenWidth*screenHeight*4) //RGBA32
 	ppu.texture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, screenWidth, screenHeight)
-	ppu.clearScreen()
+
+	ppu.mode = 2
 
 	return ppu
 }
@@ -119,7 +133,7 @@ func initSDLDebugging() (*sdl.Window, *sdl.Renderer, *sdl.Window, *sdl.Renderer)
 	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
 	checkErr(err, "Debug renderer creation error")
 
-	fullWindow, err := sdl.CreateWindow("Full window", sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
+	fullWindow, err := sdl.CreateWindow("Full window", 925, 78, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Debug window creation error")
 
 	fullRenderer, err := sdl.CreateRenderer(fullWindow, -1, sdl.RENDERER_ACCELERATED)
@@ -131,53 +145,112 @@ func initSDLDebugging() (*sdl.Window, *sdl.Renderer, *sdl.Window, *sdl.Renderer)
 
 func (ppu *PPU) tick() {
 	//PPU runs at 2.1MHZ, so this tick function is called every 2 T-cycles
-	/*
 
-		LCDC := ppu.gb.mmu.readbyte(0xFF40)
-		//LCDSTAT := ppu.gb.mmu.readbyte(0xFF41)
+	LCDC := ppu.gb.mmu.readbyte(0xFF40)
 
-		displayEnable := bitSet(LCDC, 7)
-		windowTileMap := 0x9800
-		if bitSet(LCDC, 6) {
-			windowTileMap = 0x9C00
-		}
-		windowDisplayEnable := bitSet(LCDC, 5)
-		bgwTileData := 0x9000
-		if bitSet(LCDC, 4) {
-			bgwTileData = 0x8000
-		}
-		bgTileMap := 0x9800
-		if bitSet(LCDC,3) {
-			bgTileMap = 0x9C00
-		}
-		//spriteSize := bitset(LCDC,2)
-		//spriteEnable := bitset(LCDC,1)
-		//bgwDisplayPriority := bitset(LCDC,0)
-	*/
+	displayEnable := bitSet(LCDC, 7)
+	if !displayEnable {
+		return
+	}
 
+	//This is a basic implementation of a "state machine" I'm pretty sure
+	//While this isn't what I thought of initially, I'm going to rewrite this to
+	//Be more complex solely for the purpose of learning what a state machine truly is
+	if ppu.mode == 2 {
+		if ppu.dotClock > 80 {
+			ppu.dotClock -= 80
+			ppu.mode = 3
+		} else if ppu.dotClock == 0 {
+			//Do what mode 2 does
+		}
+	}
+
+	if ppu.mode == 3 {
+		//This part of the PPU is dependant on how many sprites are in the 
+		//Sprite buffer. However to get something working asap, we're gonna 
+		//Ignore that 
+		if ppu.LY > 144 {
+			ppu.mode = 0
+		} else {
+			ppu.drawScanline()
+			ppu.LY++
+		}
+	}
+
+	if ppu.mode == 0 {
+		//Change is line dependant
+		if ppu.dotClock > (85) {
+			ppu.dotClock -= (85)
+			ppu.mode = 0
+		} else if ppu.dotClock == 0 {
+			//Do what mode 0 does
+		}
+	}
+
+	if ppu.mode == 1 {
+		//Change is line dependant
+		if ppu.dotClock > 456 {
+			ppu.dotClock -= 456
+			ppu.mode = 2
+		} else if ppu.dotClock == 0 {
+			//Do what mode 1 does
+		}
+	}
+
+	// windowTileMap := 0x9800
+	// if bitSet(LCDC, 6) {
+	// 	windowTileMap = 0x9C00
+	// }
+	// windowDisplayEnable := bitSet(LCDC, 5) //TODO: Overriden by BGW display priority
+	// bgwTileData := 0x9000
+	// if bitSet(LCDC, 4) {
+	// 	bgwTileData = 0x8000
+	// }
+	// bgTileMap := 0x9800
+	// if bitSet(LCDC, 3) {
+	// 	bgTileMap = 0x9C00
+	// }
+	// //spriteSize := bitset(LCDC,2)
+	// //spriteEnable := bitset(LCDC,1)
+	// //bgwDisplayPriority := bitset(LCDC,0)
+
+	// LCDSTAT := ppu.gb.mmu.readbyte(0xFF41)
+
+	//Compare LYC and LY here every tick
+	ppu.compareLYC()
 	ppu.dotClock++
-	if ppu.dotClock == 456 {
-		ppu.dotClock = 0
+}
+
+//Compare LY and LYC every tick of the PPU
+func (ppu *PPU) compareLYC(){
+	
+}
+
+func (ppu *PPU) drawScanline(){
+	//Draw a scanline here
+	LCDC := ppu.gb.mmu.readbyte(0xFF40)
+	windowDisplayEnable := bitSet(LCDC,5)
+
+	//Get tile map for background 
+	tileMap := 0x9800
+	if bitSet(LCDC,3){
+		tileMap = 0x9C00
 	}
-
-}
-
-func (ppu *PPU) drawBuffer(renderer *sdl.Renderer, texture *sdl.Texture, buffer []uint8, lineWidth int) {
-	renderer.Clear()
-	texture.Update(nil, buffer, 4*lineWidth)
-	renderer.Copy(texture, nil, nil)
-	renderer.Present()
-}
-
-func (ppu *PPU) clearScreen() {
-	ppu.renderer.Clear()
-	for x := 0; x < screenWidth; x++ {
-		for y := 0; y < screenHeight; y++ {
-			ppu.drawPixel(ppu.frameBuffer, screenWidth, x, y, dark)
+	renderWindow := false
+	//Check if window is enabled, and also if that window is supposed to be renderered 
+	//On this specific scanline by checking where the scanline is
+	if windowDisplayEnable && ppu.WY <= ppu.LY{
+		renderWindow = true
+		//Overwrite tile map for window
+		tileMap = 0x9800
+		if bitSet(LCDC,6){
+			tileMap = 0x9C00
 		}
 	}
 
-	ppu.drawBuffer(ppu.renderer, ppu.texture, ppu.frameBuffer, screenWidth)
+	if renderWindow {
+		//Render the window
+	}
 }
 
 //Draws a pixel on a buffer
@@ -188,10 +261,20 @@ func (ppu *PPU) drawPixel(buffer []uint8, lineWidth int, x int, y int, colour ui
 	buffer[x*4+(y*4*lineWidth)+3] = 0xFF
 }
 
-func (ppu *PPU) drawTile(framebuffer []uint8,lineWidth int,bitmap []uint8, tileCoord int) {
+func (ppu *PPU) drawBuffer(renderer *sdl.Renderer, texture *sdl.Texture, buffer []uint8, lineWidth int) {
+	renderer.Clear()
+	texture.Update(nil, buffer, 4*lineWidth)
+	renderer.Copy(texture, nil, nil)
+	renderer.Present()
+}
+
+//Render background
+
+//Logic to draw debug windows
+func (ppu *PPU) drawTile(framebuffer []uint8, lineWidth int, bitmap []uint8, tileCoord int) {
 	//Get proper offsets for drawing the current tile
-	baseRow := (tileCoord / (lineWidth/8)) * 8
-	baseCol := (tileCoord % (lineWidth/8)) * 8
+	baseRow := (tileCoord / (lineWidth / 8)) * 8
+	baseCol := (tileCoord % (lineWidth / 8)) * 8
 
 	//Begin drawing tile from supplied bitmap
 	for row := 0; row < 8; row++ {
@@ -211,7 +294,7 @@ func (ppu *PPU) displayTileset() {
 	//I ended up struggling here quite a bit because of a misunderstanding of how vram stores data
 	//It stores data in TILES, not as a row-by-row bitmap
 	for i := 0; i < 0x1800; i += 16 {
-		ppu.drawTile(ppu.tileFramebuffer,tilewindowWidth,ppu.VRAM[i:i+16], i/16)
+		ppu.drawTile(ppu.tileFramebuffer, tilewindowWidth, ppu.VRAM[i:i+16], i/16)
 	}
 
 	ppu.drawBuffer(ppu.tileRenderer, ppu.tileTexture, ppu.tileFramebuffer, tilewindowWidth)
@@ -222,7 +305,7 @@ func (ppu *PPU) displayCurrTileMap() {
 
 	//Background map select
 	bgTileMap := 0x1800 //0x9800
-	if bitSet(LCDC,3) {
+	if bitSet(LCDC, 3) {
 		bgTileMap = 0x1C00 //0x9C00
 	}
 
@@ -232,21 +315,19 @@ func (ppu *PPU) displayCurrTileMap() {
 		bgwTileData = uint16(0x0000)
 	}
 
-	bgwTileData = uint16(0x1000)
-
 	for i := 0; i < 32*32; i++ {
 		//Loop through each of the 32 x 32 tiles in one of the tilemaps
 		if bgwTileData == 0x0000 {
-			//Unsigned tile access 
+			//Unsigned tile access
 
-			tileNum := ppu.VRAM[bgTileMap + i] //Get tile num from tilemap
-			tileDataIndex := int(tileNum + 0x0000) * 16 //Get index to start of tile in vram
-			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)
+			tileNum := int(ppu.VRAM[bgTileMap+i]) //Get tile num from tilemap
+			tileDataIndex := tileNum * 16         //Get index to start of tile in vram
+			ppu.drawTile(ppu.fullFramebuffer, fullwindowWidth, ppu.VRAM[tileDataIndex:tileDataIndex+16], i)
 		} else if bgwTileData == 0x1000 {
 			//Signed tile access
-			tileNum := ppu.VRAM[bgTileMap + i] //Get tile num from tilemap
-			tileDataIndex := addSigned(bgwTileData,tileNum) * 16
-			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)  
+			tileNum := ppu.VRAM[bgTileMap+i]                      //Get tile num from tilemap
+			tileDataIndex := addSigned(bgwTileData, tileNum) * 16 //Get index to start of tile in vram
+			ppu.drawTile(ppu.fullFramebuffer, fullwindowWidth, ppu.VRAM[tileDataIndex:tileDataIndex+16], i)
 		}
 	}
 	ppu.drawBuffer(ppu.fullRenderer, ppu.fulltexture, ppu.fullFramebuffer, fullwindowWidth)
@@ -287,7 +368,7 @@ Registers: LCDC : $FF40
 		   Bit 7 => LCD Enable
 		   Bit 6 => Window Tile Map select: 0 is $9800-9BFF and 1 is $9C00-9FFF
 		   Bit 5 => Window enable
-		   Bit 4 => Tile Data select: 0 is $8000 unsigned method, and 1 is $9000 signed method
+		   Bit 4 => Tile Data select: 1 is $8000 unsigned method, and 0 is $9000 signed method
 		   Bit 3 => BG Tile Map select: 0 is $9800-9BFF and 1 is $9C00-9FFF
 		   Bit 2 => Sprite size: 0 is 1x1 tiles and 1 is 1x2 tiles
 		   Bit 1 => Sprite Enable

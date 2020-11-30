@@ -38,13 +38,14 @@ var (
 	cfile       string = "01-special"
 	skipBootrom bool   = false
 	isDebugging bool   = true
-	isLogging   bool   = true
+	isLogging   bool   = false
 
-	fullrom     string = "roms/gameroms/tetris.gb"
+	fullrom string = "roms/gameroms/Dr mario.gb"
 )
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
+
 	if isDebugging {
 		defer ui.Close()
 		defer gb.ppu.tileWindow.Destroy()
@@ -57,13 +58,15 @@ func main() {
 	if !skipBootrom {
 		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-		//gb.mmu.tempLoadRom(fullrom)
-		
+
 	} else {
+		//TODO: Find out why commercial games don't run
+		//Found: LY register needs to be updated to exit infinite loop
+
 		gb.cpu.skipBootrom()
-		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-		//gb.mmu.loadFullRom(fullrom)
-		gb.cpu.PC = 0x100
+		gb.mmu.loadFullRom(fullrom)
+		//gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+
 	}
 
 	ticker := time.NewTicker(16 * time.Millisecond)
@@ -83,9 +86,7 @@ func main() {
 			//CPU is clocked at 4.2MHZ
 			//PPU is cloked at 2.1MH
 			gb.cpu.tick()
-			if i%2 == 0 {
-				gb.ppu.tick()
-			}
+			gb.ppu.tick()
 
 			if isDebugging {
 				if gb.mmu.ram[0xFF02] == 0x81 {
