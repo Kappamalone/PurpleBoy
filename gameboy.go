@@ -36,7 +36,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 
 var (
 	cfile       string = "01-special"
-	skipBootrom bool   = false
+	skipBootrom bool   = true
 	isDebugging bool   = true
 	isLogging   bool   = false
 
@@ -45,15 +45,6 @@ var (
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
-
-	if isDebugging {
-		defer ui.Close()
-		defer gb.ppu.tileWindow.Destroy()
-		defer gb.ppu.tileRenderer.Destroy()
-	}
-	defer sdl.Quit()
-	defer gb.ppu.window.Destroy()
-	defer gb.ppu.renderer.Destroy()
 
 	if !skipBootrom {
 		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
@@ -64,8 +55,8 @@ func main() {
 		//Found: LY register needs to be updated to exit infinite loop
 
 		gb.cpu.skipBootrom()
-		gb.mmu.loadFullRom(fullrom)
-		//gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
+		//gb.mmu.loadFullRom(fullrom)
+		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 
 	}
 
@@ -84,9 +75,9 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//CPU is clocked at 4.2MHZ
-			//PPU is cloked at 2.1MH
+			//PPU is clocked at a quarter of that apparently
 			gb.cpu.tick()
-			gb.ppu.tick()
+			if i % 4 == 0 {gb.ppu.tick()}
 
 			if isDebugging {
 				if gb.mmu.ram[0xFF02] == 0x81 {
@@ -100,4 +91,13 @@ func main() {
 			break
 		}
 	}
+
+	if isDebugging {
+		defer ui.Close()
+		defer gb.ppu.tileWindow.Destroy()
+		defer gb.ppu.tileRenderer.Destroy()
+	}
+	defer sdl.Quit()
+	defer gb.ppu.window.Destroy()
+	defer gb.ppu.renderer.Destroy()
 }

@@ -34,7 +34,8 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if addr >= 0x8000 && addr <= 0x9FFF && mmu.gb.ppu.mode != 3 {
 		//8KB VRAM
-		mmu.gb.ppu.VRAM[addr-0x8000] = data
+		//mmu.gb.ppu.writeVRAM(addr-0x8000, data)
+		mmu.gb.ppu.VRAM[addr - 0x8000] = data
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -69,12 +70,22 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		//FF45 LYC
 		//FF4A, FF4B WY, WX
 		switch addr {
-			case 0xFF42: mmu.gb.ppu.SCY = data
-			case 0xFF43: mmu.gb.ppu.SCX = data
-			case 0xFF44: mmu.gb.ppu.LY = data
-			case 0xFF45: mmu.gb.ppu.LYC = data
-			case 0xFF4A: mmu.gb.ppu.WY = data
-			case 0xFF4B: mmu.gb.ppu.WX = data
+		case 0xFF40:
+			mmu.gb.ppu.LCDC = data
+		case 0xFF41:
+			mmu.gb.ppu.LCDSTAT = data
+		case 0xFF42:
+			mmu.gb.ppu.SCY = data
+		case 0xFF43:
+			mmu.gb.ppu.SCX = data
+		case 0xFF44:
+			mmu.gb.ppu.LY = data
+		case 0xFF45:
+			mmu.gb.ppu.LYC = data
+		case 0xFF4A:
+			mmu.gb.ppu.WY = data
+		case 0xFF4B:
+			mmu.gb.ppu.WX = data
 		}
 		mmu.ram[addr] = data
 
@@ -103,7 +114,8 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 
 	} else if (addr >= 0x8000 && addr <= 0x9FFF) && mmu.gb.ppu.mode != 3 {
 		//8KB VRAM
-		readByte = mmu.gb.ppu.VRAM[addr-0x8000]
+		//readByte = mmu.gb.ppu.readVRAM(addr - 0x8000)
+		readByte = mmu.gb.ppu.VRAM[addr - 0x8000]
 
 	} else if addr >= 0xA000 && addr <= 0xBFFF {
 		//8KB External RAM
@@ -138,12 +150,22 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		//FF45 LYC
 		//FF4A, FF4B WY, WX
 		switch addr {
-		case 0xFF42: readByte = mmu.gb.ppu.SCY
-		case 0xFF43: readByte = mmu.gb.ppu.SCX
-		case 0xFF44: readByte = mmu.gb.ppu.LY
-		case 0xFF45: readByte = mmu.gb.ppu.LYC
-		case 0xFF4A: readByte = mmu.gb.ppu.WY
-		case 0xFF4B: readByte = mmu.gb.ppu.WX
+		case 0xFF40:
+			readByte = mmu.gb.ppu.LCDC
+		case 0xFF41:
+			readByte = mmu.gb.ppu.LCDSTAT
+		case 0xFF42:
+			readByte = mmu.gb.ppu.SCY
+		case 0xFF43:
+			readByte = mmu.gb.ppu.SCX
+		case 0xFF44:
+			readByte = mmu.gb.ppu.LY
+		case 0xFF45:
+			readByte = mmu.gb.ppu.LYC
+		case 0xFF4A:
+			readByte = mmu.gb.ppu.WY
+		case 0xFF4B:
+			readByte = mmu.gb.ppu.WX
 		}
 		readByte = mmu.ram[addr]
 

@@ -144,7 +144,7 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 		cpu.skipBootrom()
 	}
 
-	cpu.gb.mmu.writebyte(0xFF44, 0x90) //Temporary MMIO stub
+	//cpu.gb.mmu.writebyte(0xFF44, 0x90) //Temporary MMIO stub
 
 	return cpu
 }
