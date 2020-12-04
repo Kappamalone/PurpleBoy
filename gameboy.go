@@ -25,7 +25,7 @@ type gameboy struct {
 func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
-	gb.mmu = initMemory(gb)
+	gb.mmu = initMemory(gb,skipBootrom)
 	gb.cpu = initCPU(gb, skipBootrom)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)
@@ -36,7 +36,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 
 var (
 	cfile       string = "01-special"
-	skipBootrom bool   = true
+	skipBootrom bool   = false
 	isDebugging bool   = true
 	isLogging   bool   = false
 
@@ -51,10 +51,8 @@ func main() {
 		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 
 	} else {
-		//TODO: Find out why commercial games don't run
-		//Found: LY register needs to be updated to exit infinite loop
-
 		gb.cpu.skipBootrom()
+		gb.mmu.bootromEnabled = false
 		//gb.mmu.loadFullRom(fullrom)
 		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
 
@@ -75,9 +73,9 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//CPU is clocked at 4.2MHZ
-			//PPU is clocked at a quarter of that apparently
+			
 			gb.cpu.tick()
-			if i % 4 == 0 {gb.ppu.tick()}
+			gb.ppu.tick() 
 
 			if isDebugging {
 				if gb.mmu.ram[0xFF02] == 0x81 {

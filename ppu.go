@@ -5,6 +5,12 @@ import (
 )
 
 const (
+	//Enum PPU modes
+	Hblank = iota
+	Vblank
+	OAMSearch
+	LCDTransfer 
+
 	//Main tile window sizes
 	screenWidth  = 160
 	screenHeight = 144
@@ -56,7 +62,7 @@ type PPU struct {
 	tileFramebuffer []uint8
 
 	//PPU internal variables
-	tileset [384][8][8]uint8 //8x8 tiles
+	ppuEnabled bool
 
 	LCDC    uint8
 	LCDSTAT uint8
@@ -64,7 +70,7 @@ type PPU struct {
 	SCX uint8
 	SCY uint8
 
-	LY  uint8 //Used to hold line number that
+	LY  uint8 //Used to hold line number that the scanline renderer is on
 	LYC uint8
 
 	WX uint8 //Remember this is window position - 7
@@ -97,6 +103,7 @@ func initPPU(gb *gameboy) *PPU {
 	ppu.texture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, screenWidth, screenHeight)
 
 	ppu.mode = 2
+	ppu.ppuEnabled = true
 
 	return ppu
 }
@@ -148,76 +155,46 @@ func initSDLDebugging() (*sdl.Window, *sdl.Renderer, *sdl.Window, *sdl.Renderer)
 
 }
 
-// func (ppu *PPU) readVRAM(addr uint16) uint8 {
-// 	return ppu.VRAM[addr]
-// }
-
-// func (ppu *PPU) writeVRAM(addr uint16, data uint8) {
-// 	//Function that writes to vram and handles
-// 	//Any writes to the tileData by mapping it
-// 	//To the tileset
-
-// 	ppu.VRAM[addr] = data
-// 	if addr > 0x17FF {
-// 		return
-// 	}
-
-// 	//Handle any writes to tiledata
-// 	addr &= 0x1FFE //Normalised index: So (17 & 0x1FFE) = 16
-// }
-
 func (ppu *PPU) tick() {
-	displayEnable := bitSet(ppu.LCDC, 7)
-	if !displayEnable {
+	//TODO: proper cpu privileges when accessing data
+	ppu.ppuEnabled = bitSet(ppu.LCDC, 7)
+	if !ppu.ppuEnabled {
 		return
 	}
+
 	switch ppu.mode {
-	case 2: //OAM Read mode
-		if ppu.dotClock >= 80 {
-			ppu.dotClock = 0
-			ppu.mode = 3
-		} else if ppu.dotClock == 0 {
-			ppu.LCDSTAT = (ppu.LCDSTAT & 0xFC) | 0x2
+	case OAMSearch: //OAM Search
+		if ppu.dotClock == 80 {
+			ppu.dotClock = -1
+			ppu.mode = LCDTransfer
 		}
-
-	case 3: //LCD transfer
-		//This part of the PPU is dependant on how many sprites are in the
-		//Sprite buffer. However we're just gonna ignore that for now.
-		if ppu.dotClock >= 172 {
-			ppu.mode = 0
-			ppu.dotClock = 0
+	case LCDTransfer: //LCD transfer
+		if ppu.dotClock == 172 {
+			ppu.dotClock = -1
+			ppu.mode = Hblank
 			ppu.drawScanline()
-		} else if ppu.dotClock == 0 {
-			ppu.LCDSTAT = (ppu.LCDSTAT & 0xFC) | 0x3
 		}
-
-	case 0: //Hblank
-		if ppu.dotClock >= 204 {
-			ppu.dotClock = 0
+	case Hblank: //Hblank
+		if ppu.dotClock == 204 {
+			ppu.dotClock = -1
 			ppu.LY++
-
-			if ppu.LY == 144 { //Finished rendering a full frame
-				ppu.mode = 1 //Transfer to vblank
-				ppu.drawBuffer(ppu.renderer, ppu.texture, ppu.frameBuffer, screenWidth)
+			if ppu.LY == 144 {
+				ppu.mode = Vblank
 			} else {
-				ppu.mode = 2 //Transfer to OAM search to repeat scanline drawing
+				ppu.mode = OAMSearch
 			}
-		} else if ppu.dotClock == 0 {
-			ppu.LCDSTAT = (ppu.LCDSTAT & 0xFC)
 		}
-
-	case 1: //Vblank
-		if ppu.dotClock >= 456 {
-			ppu.dotClock = 0
+	case Vblank: //Vblank
+		if ppu.dotClock == 456 {
+			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 154 {
-				ppu.mode = 2
+				ppu.drawBuffer(ppu.renderer, ppu.texture, ppu.frameBuffer, screenWidth)
 				ppu.LY = 0
+				ppu.mode = OAMSearch
 			}
-		} else if ppu.dotClock == 0 {
-			//Do what mode 1 does
-			ppu.LCDSTAT = (ppu.LCDSTAT & 0xFC) | 0x1
 		}
+
 	}
 
 	//Compare LYC and LY here every tick
@@ -232,41 +209,37 @@ func (ppu *PPU) compareLYC() {
 
 func (ppu *PPU) drawScanline() {
 	//Draw a scanline here
-	//Since I'm getting absolutely punked by this part of the project, 
-	//I shall approach it slowly and cautiously, and implement things one 
+	//Since I'm getting absolutely punked by this part of the project,
+	//I shall approach it slowly and cautiously, and implement things one
 	//bit at a time
-	
-	//ppu.VRAM[tileDataStart + (tileNum * 16)]
 
 	tileMap := 0x1800
-	if bitSet(ppu.LCDC,3){
+	if bitSet(ppu.LCDC, 3) {
 		tileMap = 0x1C00
 	}
 
 	tileDataStart := 0x1000 //Signed!
-	if bitSet(ppu.LCDC,4){
+	if bitSet(ppu.LCDC, 4) {
 		tileDataStart = 0x0000
 	}
 
-	row := int(ppu.LY % 8) //Which row of the tile is used for the line
-	tileMapOffset := (int(ppu.LY) / 8) * 32 //Offset for the tilemap
+	row := int((ppu.LY + ppu.SCY) % 8)                  //Which row of the tile is used for the line
+	tileMapOffset := (int(ppu.LY + ppu.SCY) / 8) * 32 //Offset for the tilemap
 
 	for x := 0; x < 160; x++ {
-		tile := x / 8 //Which tile we're using for 8 bits
-		col := x % 8 //Which bit from the 2 bytes are drawing
+		tile := (x + int(ppu.SCX)) / 8 //Which tile we're using for 8 bits
+		col := x % 8  //Which bit from the 2 bytes are drawing
 
-		tileNum := int(ppu.VRAM[tileMapOffset + tileMap + (tile * 16)])
-		byte1 := ppu.VRAM[tileDataStart + (tileNum * 16) + (row * 2)]
-		byte2 := ppu.VRAM[tileDataStart + (tileNum * 16) + (row * 2) + 1]
-
+		tileNum := int(ppu.VRAM[tileMapOffset+tileMap+(tile)])
+		byte1 := ppu.VRAM[tileDataStart+(tileNum*16)+(row*2)]
+		byte2 := ppu.VRAM[tileDataStart+(tileNum*16)+(row*2) + 1]
 
 		//Get colour from palette
 		palette := ppu.gb.mmu.readbyte(0xFF47)
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
 		colour := colours[(palette>>(colourIndex*2))&0x3]
 
-		ppu.drawPixel(ppu.frameBuffer,screenWidth,x,int(ppu.LY),colour)
-
+		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
 
 	}
 }

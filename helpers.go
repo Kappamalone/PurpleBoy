@@ -83,6 +83,11 @@ func bitSet(data uint8, place uint8) bool {
 	}
 }
 
+func inRange(value uint16,lowerBound uint16, upperBound uint16) bool {
+	//Used by MMU to have cleaner looking code
+	return value >= lowerBound && value <= upperBound
+}
+
 func addSigned(opcode uint16, signedValue uint8) uint16 {
 	//Th 2s Complement representation is a method of storing
 	//Negative numbers in a byte. The MSB indicates if the bit is

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 )
 
 type gameboyCPU struct {
@@ -144,21 +143,11 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 		cpu.skipBootrom()
 	}
 
-	//cpu.gb.mmu.writebyte(0xFF44, 0x90) //Temporary MMIO stub
-
 	return cpu
 }
 
 func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
-
-	//Handle remapping contents of bootrom
-	if !skipBootrom {
-		if cpu.PC == 0x100 {
-			//cpu.gb.mmu.loadFullRom(fullrom)
-			cpu.gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-		}
-	}
 
 	//Handle interrupts
 	if cpu.IME {

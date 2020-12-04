@@ -8,12 +8,16 @@ type memory struct {
 	gb  *gameboy
 	ram [1024 * 64]uint8
 
-	OAM [0x100]uint8 //Object attribute memory aka sprite data
+	bootromEnabled bool //Used to map bootrom
+
+	bootrom [0x100]uint8 //DMG Bootrom
+	OAM [0x100]uint8    //Object attribute memory aka sprite data
 }
 
-func initMemory(gb *gameboy) *memory {
+func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	mmu := new(memory)
 	mmu.gb = gb
+	mmu.bootromEnabled = !skipBootrom
 	return mmu
 }
 
@@ -21,49 +25,48 @@ func initMemory(gb *gameboy) *memory {
 
 func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//Implements the memory map from the pandocs
-
 	//TODO: make sure to return ppu mode for 0xFF41
 
-	if addr >= 0x0000 && addr <= 0x3FFF {
+	if inRange(addr,0x0000,0x3FFF) {
 		//16KB ROM Bank 00
 		mmu.ram[addr] = data
 
-	} else if addr >= 0x4000 && addr <= 0x7FFF {
+	} else if inRange(addr,0x4000,0x7FFF) {
 		//16KB ROM Bank 01~NN
 		mmu.ram[addr] = data
 
-	} else if addr >= 0x8000 && addr <= 0x9FFF && mmu.gb.ppu.mode != 3 {
+	} else if inRange(addr,0x8000,0x9FFF) {
 		//8KB VRAM
 		//mmu.gb.ppu.writeVRAM(addr-0x8000, data)
 		mmu.gb.ppu.VRAM[addr - 0x8000] = data
 
-	} else if addr >= 0xA000 && addr <= 0xBFFF {
+	} else if inRange(addr,0xA000,0xBFFF){
 		//8KB External RAM
 		mmu.ram[addr] = data
 
-	} else if addr >= 0xC000 && addr <= 0xCFFF {
+	} else if inRange(addr,0xC000,0xCFFF) {
 		//4KB WRAM Bank 0
 		mmu.ram[addr] = data
 
-	} else if addr >= 0xD000 && addr <= 0xDFFF {
+	} else if inRange(addr,0xD000,0xDFFF) {
 		//4KB WRAM Bank 1~N
 		mmu.ram[addr] = data
 
-	} else if addr >= 0xE000 && addr <= 0xFDFF {
+	} else if inRange(addr,0xE000,0xFDFF) {
 		//ECHO RAM of C000~DDFF
 		mmu.ram[addr-0x2000] = data
 
-	} else if (addr >= 0xFE00 && addr <= 0xFE9F) && (mmu.gb.ppu.mode != 2 && mmu.gb.ppu.mode != 3) { //Tidy this up later!
+	} else if inRange(addr,0xFE00,0xFE9F) { 
 		//OAM
 		mmu.OAM[addr-0xFE00] = data
 
-	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
+	} else if inRange(addr,0xFEA0,0xFEFF) {
 		//Not usable
 		if isDebugging {
 			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
 		}
 
-	} else if addr >= 0xFF00 && addr <= 0xFF7F {
+	} else if inRange(addr,0xFF00,0xFF7F) {
 		//IO Registers
 		//FF42,FF43 SCY, SCX
 		//FF44 LY
@@ -79,21 +82,24 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF43:
 			mmu.gb.ppu.SCX = data
 		case 0xFF44:
-			mmu.gb.ppu.LY = data
+			//LY is read only
 		case 0xFF45:
 			mmu.gb.ppu.LYC = data
 		case 0xFF4A:
 			mmu.gb.ppu.WY = data
 		case 0xFF4B:
 			mmu.gb.ppu.WX = data
+		case 0xFF50:
+			mmu.bootromEnabled = (data == 1)
+		default:
+			mmu.ram[addr] = data
 		}
-		mmu.ram[addr] = data
 
-	} else if addr >= 0xFF80 && addr <= 0xFFFE {
+	} else if inRange(addr,0xFF80,0xFFFE){
 		//HRAM
 		mmu.ram[addr] = data
 
-	} else if addr >= 0xFFFF && addr <= 0xFFFF {
+	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
 		mmu.ram[0xFFFF] = data
 	}
@@ -101,49 +107,54 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 }
 
 func (mmu *memory) readbyte(addr uint16) uint8 {
+	readByte := uint8(0)
 
-	var readByte uint8 = 0
-
-	if addr >= 0x0000 && addr <= 0x3FFF {
+	if inRange(addr,0x00,0xFF)  {
+		if mmu.bootromEnabled {
+			readByte = mmu.bootrom[addr]
+		} else {
+			readByte = mmu.ram[addr]
+		}
+	} else if inRange(addr,0x100,0x3FFF){
 		//16KB ROM Bank 00
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0x4000 && addr <= 0x7FFF {
+	} else if inRange(addr,0x4000,0x7FFF){
 		//16KB ROM Bank 01~NN
 		readByte = mmu.ram[addr]
 
-	} else if (addr >= 0x8000 && addr <= 0x9FFF) && mmu.gb.ppu.mode != 3 {
+	} else if inRange(addr,0x8000,0x9FFF){
 		//8KB VRAM
 		//readByte = mmu.gb.ppu.readVRAM(addr - 0x8000)
 		readByte = mmu.gb.ppu.VRAM[addr - 0x8000]
 
-	} else if addr >= 0xA000 && addr <= 0xBFFF {
+	} else if inRange(addr,0xA000,0xBFFF){
 		//8KB External RAM
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0xC000 && addr <= 0xCFFF {
+	} else if inRange(addr,0xC000,0xCFFF){
 		//4KB WRAM Bank 0
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0xD000 && addr <= 0xDFFF {
+	} else if inRange(addr,0xD000,0xDFFF){
 		//4KB WRAM Bank 1~N
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0xE000 && addr <= 0xFDFF {
+	} else if inRange(addr,0xE000,0xFDFF){
 		//ECHO RAM of C000~DDFF
 		readByte = mmu.ram[addr-0x2000]
 
-	} else if addr >= 0xFE00 && addr <= 0xFE9F && (mmu.gb.ppu.mode != 2 && mmu.gb.ppu.mode != 3) { //Tidy this up later!
+	} else if inRange(addr,0xFE00,0xFE9F){
 		//OAM
 		readByte = mmu.OAM[addr-0xFE00]
 
-	} else if addr >= 0xFEA0 && addr <= 0xFEFF {
+	} else if inRange(addr,0xFEA0,0xFEFF){
 		//Not usable
 		if isDebugging {
 			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
 		}
 
-	} else if addr >= 0xFF00 && addr <= 0xFF7F {
+	} else if inRange(addr,0xFF00,0xFF7F){
 		//IO Registers
 		//FF42,FF43 SCY, SCX
 		//FF44 LY
@@ -166,17 +177,19 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.WY
 		case 0xFF4B:
 			readByte = mmu.gb.ppu.WX
+		default:
+			readByte = mmu.ram[addr]
 		}
-		readByte = mmu.ram[addr]
 
-	} else if addr >= 0xFF80 && addr <= 0xFFFE {
+	} else if inRange(addr,0xFF80,0xFFFE){
 		//HRAM
 		readByte = mmu.ram[addr]
 
-	} else if addr >= 0xFFFF && addr <= 0xFFFF {
+	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
 		readByte = mmu.ram[0xFFFF]
 	}
+
 
 	return readByte
 
@@ -203,7 +216,7 @@ func (mmu *memory) loadBootrom(path string) {
 	checkErr(err, "Could not find bootrom!")
 
 	for i := 0; i < len(file); i++ {
-		mmu.ram[i] = file[i]
+		mmu.bootrom[i] = file[i]
 	}
 
 }
