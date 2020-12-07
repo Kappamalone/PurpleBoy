@@ -39,7 +39,7 @@ var (
 	isDebugging bool   = true
 	isLogging   bool   = false
 
-	fullrom string = "roms/gameroms/Dr mario.gb"
+	fullrom string = "roms/gameroms/Boxxle.gb"
 )
 
 func main() {
@@ -54,7 +54,6 @@ func main() {
 			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
 
 			gb.ppu.displayTileset()
-			gb.ppu.displayCurrTileMap()
 		}
 
 		for i := 0; i < cyclesPerFrame; i++ {
@@ -62,12 +61,8 @@ func main() {
 			gb.cpu.tick()
 			gb.ppu.tick() 
 
-			// if isDebugging {
-			// 	if gb.mmu.ram[0xFF02] == 0x81 {
-			// 		gb.debug.printConsole(fmt.Sprintf("%c", gb.mmu.ram[0xFF01]), "cyan")
-			// 		gb.mmu.ram[0xFF02] = 0x00
-			// 	}
-			// }
+			//gb.cpu.timers.handleTimers()
+
 		}
 		if handleInput() {
 			ticker.Stop() //Stop ticker to exit program
@@ -79,8 +74,6 @@ func main() {
 		defer ui.Close()
 		defer gb.ppu.tileWindow.Destroy()
 		defer gb.ppu.tileRenderer.Destroy()
-		defer gb.ppu.fullWindow.Destroy()
-		defer gb.ppu.fullRenderer.Destroy()
 	}
 	defer sdl.Quit()
 	defer gb.ppu.window.Destroy()

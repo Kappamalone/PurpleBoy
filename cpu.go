@@ -73,7 +73,8 @@ func (cpu *gameboyCPU) skipBootrom() {
 	cpu.BC = 0x0013
 	cpu.DE = 0x00D8
 	cpu.HL = 0x014D
-	cpu.PC = 0x100
+	cpu.gb.ppu.LCDC = 0x91
+	cpu.gb.mmu.writebyte(0xFF47,0xFC) //Palette
 }
 
 func (cpu *gameboyCPU) initMaps() {
@@ -156,7 +157,6 @@ func (cpu *gameboyCPU) tick() {
 	//Handle interrupts
 	//TODO: Is this checked every tick?
 	cpu.handleInterrupts()
-	//cpu.timers.handleTimers()
 
 	if cpu.cycles == 0 {
 		if isLogging {

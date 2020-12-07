@@ -89,20 +89,6 @@ func inRange(value uint16,lowerBound uint16, upperBound uint16) bool {
 }
 
 func addSigned(opcode uint16, signedValue uint8) uint16 {
-	//Th 2s Complement representation is a method of storing
-	//Negative numbers in a byte. The MSB indicates if the bit is
-	//negative, with the 0x80 being -128 and 0x7F being 127
-	//The reason I'm not directly computing the twos complement
-	//Is because these additions are adding uints of different sizes
-	/*
-		if signedValue>>7 == 1 {
-			subtract := (1 << 7) - (signedValue & 0x7F)
-			return opcode - uint16(subtract)
-		} else {
-			add := signedValue & 0x7F
-			return opcode + uint16(add)
-		}*/
-
 	//This new method I found courtesy of the emudev discord server is a lot cleaner
 	//Basically we convert the uint8 => int8 so that the compiler knows its signed
 	//Then we convert this to an int16, which retains this sign
