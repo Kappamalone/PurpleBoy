@@ -58,7 +58,7 @@ func main() {
 		}
 
 		for i := 0; i < cyclesPerFrame; i++ {
-			//CPU is clocked at 4.2MHZ
+			//System is clocked at 4.2MHZ
 			gb.cpu.tick()
 			gb.ppu.tick() 
 
@@ -79,6 +79,8 @@ func main() {
 		defer ui.Close()
 		defer gb.ppu.tileWindow.Destroy()
 		defer gb.ppu.tileRenderer.Destroy()
+		defer gb.ppu.fullWindow.Destroy()
+		defer gb.ppu.fullRenderer.Destroy()
 	}
 	defer sdl.Quit()
 	defer gb.ppu.window.Destroy()

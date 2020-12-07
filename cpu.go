@@ -156,7 +156,7 @@ func (cpu *gameboyCPU) tick() {
 	//Handle interrupts
 	//TODO: Is this checked every tick?
 	cpu.handleInterrupts()
-	cpu.timers.handleTimers()
+	//cpu.timers.handleTimers()
 
 	if cpu.cycles == 0 {
 		if isLogging {

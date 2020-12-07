@@ -19,7 +19,7 @@ const (
 	//Full window sizes
 	fullwindowWidth  = 256
 	fullwindowHeight = 256
-	fullwindowScale  = 2
+	fullwindowScale  = 1
 
 	//Debug tile window sizes
 	tilewindowWidth  = 128
@@ -120,7 +120,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	//Create window
 	if isDebugging {
 		//To line up the windows nicely with a fullscreen termui
-		mWindowPosX = 260
+		mWindowPosX = 13
 		mWindowPosY = 78
 	}
 	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN)
@@ -138,14 +138,14 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 func initSDLDebugging() (*sdl.Window, *sdl.Renderer, *sdl.Window, *sdl.Renderer) {
 	//Initialises the required windows for debugging purposes
 
-	tileWindow, err := sdl.CreateWindow("Debug", 1500, 447, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
+	tileWindow, err := sdl.CreateWindow("Debug", 660, 78, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Debug window creation error")
 	tileWindow.SetResizable(true)
 
 	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
 	checkErr(err, "Debug renderer creation error")
 
-	fullWindow, err := sdl.CreateWindow("Full window", 925, 78, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
+	fullWindow, err := sdl.CreateWindow("Full window", 1051, 78, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Debug window creation error")
 
 	fullRenderer, err := sdl.CreateRenderer(fullWindow, -1, sdl.RENDERER_ACCELERATED)
@@ -223,19 +223,22 @@ func (ppu *PPU) drawScanline() {
 		tileDataStart = 0x0000
 	}
 
-	row := int((ppu.LY + ppu.SCY) % 8)                  //Which row of the tile is used for the line
-	tileMapOffset := (int(ppu.LY + ppu.SCY) / 8) * 32 //Offset for the tilemap
+	palette := ppu.gb.mmu.readbyte(0xFF47)
+
+	ycoordOffset := int(ppu.LY + ppu.SCY)
+	row := ycoordOffset % 8                     //Which row of the tile is used for the line
+	tileMapOffset := (ycoordOffset / 8) * 32   //Offset for the tilemap
 
 	for x := 0; x < 160; x++ {
-		tile := (x + int(ppu.SCX)) / 8 //Which tile we're using for 8 bits
-		col := x % 8  //Which bit from the 2 bytes are drawing
+		xcoordOffset := x + int(ppu.SCX)
+		tile := (xcoordOffset) / 8 //Which tile we're using for 8 bits
+		col := x % 8  //Which bit from the 2 bytes are drawing //POSSIBLE PROBLEM
 
 		tileNum := ppu.VRAM[tileMapOffset+tileMap+(tile)]
 		byte1 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2)]
 		byte2 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2) + 1]
 
 		//Get colour from palette
-		palette := ppu.gb.mmu.readbyte(0xFF47)
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
 		colour := colours[(palette>>(colourIndex*2))&0x3]
 
