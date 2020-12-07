@@ -1,30 +1,28 @@
 package main
 
-func (cpu *gameboyCPU) ISR() {
+func (cpu *gameboyCPU) handleInterrupts() {
 	//Interrupt service routine
-
-	interruptEnable := cpu.gb.mmu.readbyte(0xFFFF)
-	interruptFlags := cpu.gb.mmu.readbyte(0xFF0F)
-
+	if !cpu.IME {
+		return
+	}
 	//Handle an interupt if interrupt exists
-	if interruptEnable != 0 && interruptFlags != 0 {
-		cpu.SP -= 2
-		cpu.gb.mmu.writeword(cpu.SP, cpu.PC)
+	if cpu.IE != 0 && cpu.IF != 0 {
+		cpu.PUSH(cpu.PC)
 
-		if bitSet(interruptEnable, 0) && bitSet(interruptFlags, 0) {
+		if bitSet(cpu.IE, 0) && bitSet(cpu.IF, 0) {
 			cpu.VBlank()
-		} else if bitSet(interruptEnable, 1) && bitSet(interruptFlags, 1) {
+		} else if bitSet(cpu.IE, 1) && bitSet(cpu.IF, 1) {
 			cpu.LCDSTAT()
-		} else if bitSet(interruptEnable, 2) && bitSet(interruptFlags, 2) {
+		} else if bitSet(cpu.IE, 2) && bitSet(cpu.IF, 2) {
 			cpu.TIMER()
-		} else if bitSet(interruptEnable, 3) && bitSet(interruptFlags, 3) {
+		} else if bitSet(cpu.IE, 3) && bitSet(cpu.IF, 3) {
 			cpu.SERIAL()
-		} else if bitSet(interruptEnable, 4) && bitSet(interruptFlags, 4) {
+		} else if bitSet(cpu.IE, 4) && bitSet(cpu.IF, 4) {
 			cpu.JOYPAD()
 		}
-	}
 
-	cpu.cycles += 20 //Take a total of 5 machine cycles
+		cpu.cycles += 20 //Takes a total of 5 machine cycles
+	}
 }
 
 /*
@@ -35,40 +33,40 @@ The general gist of handling these 5 interrupts are as follows.
 */
 func (cpu *gameboyCPU) VBlank() {
 	//V-blank
-	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x01)
+	cpu.IF &= (0xFF-0x01)
 	cpu.PC = 0x0040
 	cpu.IME = false
-	cpu.gb.debug.printConsole("VBLANK", "cyan")
+	cpu.gb.debug.printConsole("VBLANK\n", "cyan")
 }
 
 func (cpu *gameboyCPU) LCDSTAT() {
 	//LCD STAT
-	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x02)
+	cpu.IF &= (0xFF-0x02)
 	cpu.PC = 0x0048
 	cpu.IME = false
-	cpu.gb.debug.printConsole("LCD STAT", "cyan")
+	cpu.gb.debug.printConsole("LCD STAT\n", "cyan")
 }
 
 func (cpu *gameboyCPU) TIMER() {
 	//Timer
-	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x04)
+	cpu.IF &= (0xFF-0x04)
 	cpu.PC = 0x0050
 	cpu.IME = false
-	cpu.gb.debug.printConsole("TIMER", "cyan")
+	cpu.gb.debug.printConsole("TIMER\n", "cyan")
 }
 
 func (cpu *gameboyCPU) SERIAL() {
 	//Serial
-	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x08)
+	cpu.IF &= (0xFF-0x08)
 	cpu.PC = 0x0058
 	cpu.IME = false
-	cpu.gb.debug.printConsole("SERIAL", "cyan")
+	cpu.gb.debug.printConsole("SERIAL\n", "cyan")
 }
 
 func (cpu *gameboyCPU) JOYPAD() {
 	//Joypad
-	cpu.gb.mmu.writebyte(0xFF0F, 0xFF-0x10)
+	cpu.IF &= (0xFF-0x10)
 	cpu.PC = 0x0060
 	cpu.IME = false
-	cpu.gb.debug.printConsole("JOYPAD", "cyan")
+	cpu.gb.debug.printConsole("JOYPAD\n", "cyan")
 }

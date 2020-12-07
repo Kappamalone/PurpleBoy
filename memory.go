@@ -11,13 +11,18 @@ type memory struct {
 	bootromEnabled bool //Used to map bootrom
 
 	bootrom [0x100]uint8 //DMG Bootrom
-	OAM [0x100]uint8    //Object attribute memory aka sprite data
+	OAM     [0x100]uint8    //Object attribute memory aka sprite data
 }
 
 func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	mmu := new(memory)
 	mmu.gb = gb
 	mmu.bootromEnabled = !skipBootrom
+
+	if mmu.bootromEnabled {
+		mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
+	}
+	mmu.loadFullRom(fullrom)
 	return mmu
 }
 
@@ -62,17 +67,26 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if inRange(addr,0xFEA0,0xFEFF) {
 		//Not usable
+		/* I'd log this "erronous" behaviour, however it seems that multiple games do this
 		if isDebugging {
 			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
-		}
+		}*/
 
 	} else if inRange(addr,0xFF00,0xFF7F) {
-		//IO Registers
-		//FF42,FF43 SCY, SCX
-		//FF44 LY
-		//FF45 LYC
-		//FF4A, FF4B WY, WX
 		switch addr {
+		//TIMERS MMIO
+		case 0xFF04:
+			mmu.gb.cpu.timers.DIV = 0 //Writing any value to DIV resets it to 0
+		case 0xFF05:
+			mmu.gb.cpu.timers.TIMA = data
+		case 0xFF06:
+			mmu.gb.cpu.timers.TMA = data
+		case 0xFF07:
+			mmu.gb.cpu.timers.TAC = data
+		//Interrupt MMIO
+		case 0xFF0F:
+			mmu.gb.cpu.IF = data 
+		//PPU MMIO
 		case 0xFF40:
 			mmu.gb.ppu.LCDC = data
 		case 0xFF41:
@@ -90,7 +104,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF4B:
 			mmu.gb.ppu.WX = data
 		case 0xFF50:
-			mmu.bootromEnabled = (data == 1)
+			mmu.bootromEnabled = (data == 0) //Bootrom writes a non-zero value here to unmap bootrom from memory
 		default:
 			mmu.ram[addr] = data
 		}
@@ -101,7 +115,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
-		mmu.ram[0xFFFF] = data
+		mmu.gb.cpu.IE = data
 	}
 
 }
@@ -155,12 +169,20 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		}
 
 	} else if inRange(addr,0xFF00,0xFF7F){
-		//IO Registers
-		//FF42,FF43 SCY, SCX
-		//FF44 LY
-		//FF45 LYC
-		//FF4A, FF4B WY, WX
 		switch addr {
+		//TIMERS MMIO
+		case 0xFF04:
+			readByte = mmu.gb.cpu.timers.DIV
+		case 0xFF05:
+			readByte = mmu.gb.cpu.timers.TIMA
+		case 0xFF06:
+			readByte = mmu.gb.cpu.timers.TMA
+		case 0xFF07:
+			readByte = mmu.gb.cpu.timers.TAC
+		//Interrupt MMIO
+		case 0xFF0F:
+			readByte = mmu.gb.cpu.IF
+		//PPU MMIO
 		case 0xFF40:
 			readByte = mmu.gb.ppu.LCDC
 		case 0xFF41:
@@ -187,7 +209,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 
 	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
-		readByte = mmu.ram[0xFFFF]
+		readByte = mmu.gb.cpu.IE
 	}
 
 
@@ -219,19 +241,6 @@ func (mmu *memory) loadBootrom(path string) {
 		mmu.bootrom[i] = file[i]
 	}
 
-}
-
-func (mmu *memory) tempLoadRom(path string) {
-	file, err := ioutil.ReadFile(path)
-	checkErr(err, "Could not find rom specified!")
-
-	//Will probably change later when implementing catridge
-	//Basically we're exposing part of the cartridge rom to the
-	//Nintendo boot up sequence so that the anti-piracy checksums don't
-	//Freeze the gameboy
-	for i := 0; i < len(file)-0x100; i++ {
-		mmu.ram[0x100+i] = file[i+0x100]
-	}
 }
 
 func (mmu *memory) loadFullRom(path string) {

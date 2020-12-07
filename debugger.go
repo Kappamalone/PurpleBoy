@@ -82,8 +82,8 @@ func (debug *debugger) logTrace() {
 	log.Printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%02X %02X %02X %02X)", debug.gb.cpu.getAcc(), debug.gb.cpu.AF&0x00FF, debug.gb.cpu.r8Read[0](), debug.gb.cpu.r8Read[1](), debug.gb.cpu.r8Read[2](), debug.gb.cpu.r8Read[3](), debug.gb.cpu.r8Read[4](), debug.gb.cpu.r8Read[5](), debug.gb.cpu.SP, debug.gb.cpu.PC, debug.gb.mmu.ram[debug.gb.cpu.PC], debug.gb.mmu.ram[debug.gb.cpu.PC+1], debug.gb.mmu.ram[debug.gb.cpu.PC+2], debug.gb.mmu.ram[debug.gb.cpu.PC+3])
 }
 
-func (debug *debugger) logValue(value1 uint8, value2 uint8) {
-	log.Printf("%02X %02X",value1, value2)
+func (debug *debugger) logValue(value1 uint8) {
+	log.Printf("%02X",value1)
 }
 
 func (debug *debugger) logVRAM() {
@@ -122,7 +122,9 @@ func (debug *debugger) updateDebugInformation() {
 	debugCPU = append(debugCPU, fmt.Sprintf(" [Z](fg:cyan) = [%d](fg:yellow)       [N](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getZ()), boolToInt(debug.gb.cpu.getN())))
 	debugCPU = append(debugCPU, fmt.Sprintf(" [H](fg:cyan) = [%d](fg:yellow)       [C](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.getH()), boolToInt(debug.gb.cpu.getC())))
 	debugCPU = append(debugCPU, "[\n\n------------------------\n](fg:cyan)")
-	debugCPU = append(debugCPU, fmt.Sprintf(" [IME](fg:cyan) = [%d](fg:yellow)     [HALT](fg:cyan) = [%d](fg:yellow)", boolToInt(debug.gb.cpu.IME), boolToInt(debug.gb.cpu.HALT)))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [IME](fg:cyan) = [%d](fg:yellow)     [HALT](fg:cyan) = [%d](fg:yellow)\n", boolToInt(debug.gb.cpu.IME), boolToInt(debug.gb.cpu.HALT)))
+	debugCPU = append(debugCPU, fmt.Sprintf(" [IF](fg:cyan) = $[%02X](fg:yellow)    [IE](fg:cyan) = $[%02X](fg:yellow)", debug.gb.cpu.IF, debug.gb.cpu.IE))
+
 
 	debug.cpuState.Text = strings.Join(debugCPU, "\n")
 	debug.consoleOut.Text = strings.Join(debug.console, "")

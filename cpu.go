@@ -5,11 +5,14 @@ import (
 
 type gameboyCPU struct {
 	gb *gameboy
+	timers *timers
 
 	AF, BC, DE, HL, SP, PC uint16
 
 	cycles int
 	IME    bool
+	IE     uint8 //Interrupts enabled
+	IF     uint8 //Interrupt requests
 	HALT   bool
 
 	r8Read    map[uint8]func() uint8       //r8 group 1 reads
@@ -138,11 +141,12 @@ func (cpu *gameboyCPU) initMaps() {
 func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	cpu := new(gameboyCPU)
 	cpu.gb = gb
+	cpu.timers = new(timers)
 	cpu.initMaps()
 	if skipBootrom {
 		cpu.skipBootrom()
 	}
-
+	
 	return cpu
 }
 
@@ -150,9 +154,9 @@ func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
 
 	//Handle interrupts
-	if cpu.IME {
-		cpu.ISR()
-	}
+	//TODO: Is this checked every tick?
+	cpu.handleInterrupts()
+	cpu.timers.handleTimers()
 
 	if cpu.cycles == 0 {
 		if isLogging {
@@ -163,7 +167,7 @@ func (cpu *gameboyCPU) tick() {
 		cpu.PC++
 
 		if fetchedInstruction == 0xCB {
-			//add cycles for cb
+			//add cycles for CB-prefix
 			cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
 		} else {
 			//add cycles for regular instruction

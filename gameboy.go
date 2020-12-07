@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -35,8 +34,8 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	cfile       string = "01-special"
-	skipBootrom bool   = false
+	cfile       string = "02-interrupts"
+	skipBootrom bool   = true
 	isDebugging bool   = true
 	isLogging   bool   = false
 
@@ -45,19 +44,6 @@ var (
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
-
-	if !skipBootrom {
-		gb.mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
-		gb.mmu.tempLoadRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-
-	} else {
-		gb.cpu.skipBootrom()
-		gb.mmu.bootromEnabled = false
-		//gb.mmu.loadFullRom(fullrom)
-		gb.mmu.loadFullRom(fmt.Sprintf("roms/testroms/cpu_instrs/%s.gb", cfile))
-
-	}
-
 	ticker := time.NewTicker(16 * time.Millisecond)
 
 	//One frame
@@ -73,16 +59,15 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//CPU is clocked at 4.2MHZ
-			
 			gb.cpu.tick()
 			gb.ppu.tick() 
 
-			if isDebugging {
-				if gb.mmu.ram[0xFF02] == 0x81 {
-					gb.debug.printConsole(fmt.Sprintf("%c", gb.mmu.ram[0xFF01]), "cyan")
-					gb.mmu.ram[0xFF02] = 0x00
-				}
-			}
+			// if isDebugging {
+			// 	if gb.mmu.ram[0xFF02] == 0x81 {
+			// 		gb.debug.printConsole(fmt.Sprintf("%c", gb.mmu.ram[0xFF01]), "cyan")
+			// 		gb.mmu.ram[0xFF02] = 0x00
+			// 	}
+			// }
 		}
 		if handleInput() {
 			ticker.Stop() //Stop ticker to exit program

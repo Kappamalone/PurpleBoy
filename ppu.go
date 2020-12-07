@@ -218,7 +218,7 @@ func (ppu *PPU) drawScanline() {
 		tileMap = 0x1C00
 	}
 
-	tileDataStart := 0x1000 //Signed!
+	tileDataStart := uint16(0x1000) //Signed!
 	if bitSet(ppu.LCDC, 4) {
 		tileDataStart = 0x0000
 	}
@@ -230,9 +230,9 @@ func (ppu *PPU) drawScanline() {
 		tile := (x + int(ppu.SCX)) / 8 //Which tile we're using for 8 bits
 		col := x % 8  //Which bit from the 2 bytes are drawing
 
-		tileNum := int(ppu.VRAM[tileMapOffset+tileMap+(tile)])
-		byte1 := ppu.VRAM[tileDataStart+(tileNum*16)+(row*2)]
-		byte2 := ppu.VRAM[tileDataStart+(tileNum*16)+(row*2) + 1]
+		tileNum := ppu.VRAM[tileMapOffset+tileMap+(tile)]
+		byte1 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2)]
+		byte2 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2) + 1]
 
 		//Get colour from palette
 		palette := ppu.gb.mmu.readbyte(0xFF47)
@@ -306,17 +306,9 @@ func (ppu *PPU) displayCurrTileMap() {
 
 	for i := 0; i < 32*32; i++ {
 		//Loop through each of the 32 x 32 tiles in one of the tilemaps
-		if tileDataStart == 0x0000 {
-			//Unsigned tile access
-			tileNum := int(ppu.VRAM[bgTileMap+i]) //Get tile num from tilemap
-			tileDataIndex := tileNum * 16         //Get index to start of tile in vram
-			ppu.drawTile(ppu.fullFramebuffer, fullwindowWidth, ppu.VRAM[tileDataIndex:tileDataIndex+16], i)
-		} else if tileDataStart == 0x1000 {
-			//Signed tile access
-			tileNum := ppu.VRAM[bgTileMap+i]                                //Get tile num from tilemap
-			tileDataIndex := addSigned(uint16(tileDataStart), tileNum) * 16 //Get index to start of tile in vram
-			ppu.drawTile(ppu.fullFramebuffer, fullwindowWidth, ppu.VRAM[tileDataIndex:tileDataIndex+16], i)
-		}
+		tileNum := ppu.VRAM[bgTileMap+i]   //Get tile num from tilemap
+		tileDataIndex := uint16(tileDataStart) + (uint16(int16(int8(tileNum))) * 16) //A bit ugly but it basically turns the tile num into a 16 bit signed integer
+		ppu.drawTile(ppu.fullFramebuffer, fullwindowWidth, ppu.VRAM[tileDataIndex:tileDataIndex+16], i)
 	}
 	ppu.drawBuffer(ppu.fullRenderer, ppu.fulltexture, ppu.fullFramebuffer, fullwindowWidth)
 }
