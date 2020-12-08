@@ -55,6 +55,12 @@ type PPU struct {
 	tileTexture     *sdl.Texture
 	tileFramebuffer []uint8
 
+	//Full window (debugging)
+	fullWindow      *sdl.Window
+	fullRenderer    *sdl.Renderer
+	fulltexture     *sdl.Texture
+	fullFramebuffer []uint8
+
 	//PPU internal variables
 	ppuEnabled bool
 
@@ -86,6 +92,10 @@ func initPPU(gb *gameboy) *PPU {
 		ppu.tileFramebuffer = make([]uint8, tilewindowWidth*tilewindowHeight*4) //RGBA32
 		ppu.tileTexture, _ = ppu.tileRenderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, tilewindowWidth, tilewindowHeight)
 		ppu.tileRenderer.SetScale(tilewindowScale, tilewindowScale)
+
+		ppu.fullFramebuffer = make([]uint8, fullwindowWidth*fullwindowHeight*4) //RGBA32
+		ppu.fulltexture, _ = ppu.fullRenderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, fullwindowWidth, fullwindowHeight)
+		ppu.fullRenderer.SetScale(fullwindowScale, fullwindowScale)
 	}
 
 	ppu.renderer.SetScale(windowScale, windowScale)
@@ -111,7 +121,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	if isDebugging {
 		//To line up the windows nicely with a fullscreen termui
 		mWindowPosX = 13
-		mWindowPosY = 78
+		mWindowPosY = 80
 	}
 	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Window creation error")
@@ -125,17 +135,24 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 
 }
 
-func initSDLDebugging() (*sdl.Window, *sdl.Renderer) {
+func initSDLDebugging() (*sdl.Window, *sdl.Renderer, ) {
 	//Initialises the required windows for debugging purposes
 
-	tileWindow, err := sdl.CreateWindow("Debug", 660, 78, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
+	tileWindow, err := sdl.CreateWindow("Debug", 660, 80, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
 	checkErr(err, "Debug window creation error")
 	tileWindow.SetResizable(true)
 
 	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
 	checkErr(err, "Debug renderer creation error")
 
-	return tileWindow, tileRenderer
+	//fullWindow, err := sdl.CreateWindow("Full window", 1051, 78, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
+	checkErr(err, "Debug window creation error")
+
+	//fullRenderer, err := sdl.CreateRenderer(fullWindow, -1, sdl.RENDERER_ACCELERATED)
+	checkErr(err, "Debug renderer creation error")
+
+	return tileWindow, tileRenderer //, fullWindow, fullRenderer
+
 }
 
 func (ppu *PPU) tick() {
@@ -163,6 +180,7 @@ func (ppu *PPU) tick() {
 			ppu.LY++
 			if ppu.LY == 144 {
 				ppu.mode = Vblank
+				//ppu.gb.cpu.IF |= 0x01 //Request vblank EXCEPT for some reason it breaks everything
 			} else {
 				ppu.mode = OAMSearch
 			}
@@ -273,6 +291,38 @@ func (ppu *PPU) displayTileset() {
 	}
 
 	ppu.drawBuffer(ppu.tileRenderer, ppu.tileTexture, ppu.tileFramebuffer, tilewindowWidth)
+}
+
+func (ppu *PPU) displayCurrTileMap(){
+	for i := 0; i < 32*32; i++ {
+		//Loop through each of the 32 x 32 tiles in one of the tilemaps
+
+		tileMap := 0x1800 //0x9800
+		if bitSet(ppu.LCDC,3) {
+			tileMap = 0x1C00 //0x9C00
+		}
+
+		tileDataStart := uint16(0x1000) //0x9000
+		if bitSet(ppu.LCDC, 4) { 
+			tileDataStart = 0x0000 
+		}
+
+		tileDataStart = uint16(0x1000) //Temp fix?
+
+		
+		if tileDataStart == 0x0000 {
+			//Unsigned tile access
+			tileNum := ppu.VRAM[tileMap + i] //Get tile num from tilemap
+			tileDataIndex := tileNum * 16 //Get index to start of tile in vram
+			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)
+		} else if tileDataStart == 0x1000 {
+			//Signed tile access
+			tileNum := ppu.VRAM[tileMap + i] //Get tile num from tilemap
+			tileDataIndex := tileDataStart + uint16(int16(int8(uint8(tileNum)))) * 16
+			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)  
+		}
+	}
+	ppu.drawBuffer(ppu.fullRenderer, ppu.fulltexture, ppu.fullFramebuffer, fullwindowWidth)
 }
 /*
 Some self documentation just to wrap my head around these ppu concepts:

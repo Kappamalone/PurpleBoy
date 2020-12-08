@@ -80,11 +80,21 @@ func initLogging() {
 
 func (debug *debugger) logTrace() {
 	log.Printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%02X %02X %02X %02X)", debug.gb.cpu.getAcc(), debug.gb.cpu.AF&0x00FF, debug.gb.cpu.r8Read[0](), debug.gb.cpu.r8Read[1](), debug.gb.cpu.r8Read[2](), debug.gb.cpu.r8Read[3](), debug.gb.cpu.r8Read[4](), debug.gb.cpu.r8Read[5](), debug.gb.cpu.SP, debug.gb.cpu.PC, debug.gb.mmu.ram[debug.gb.cpu.PC], debug.gb.mmu.ram[debug.gb.cpu.PC+1], debug.gb.mmu.ram[debug.gb.cpu.PC+2], debug.gb.mmu.ram[debug.gb.cpu.PC+3])
+	//log.Printf("PC: %04X",debug.gb.cpu.PC)
 }
 
-func (debug *debugger) logValue(value1 uint8) {
-	log.Printf("%02X",value1)
+func (debug *debugger) logValue(value1 uint16) {
+	log.Printf("%04X",value1)
 }
+
+func (debug *debugger) logRead(value1 uint16) {
+	log.Printf("Reading MMIO: %04X",value1)
+}
+
+func (debug *debugger) logWrite(value1 uint16) {
+	log.Printf("Writing MMIO: %04X",value1)
+}
+
 
 func (debug *debugger) logVRAM() {
 	for i := 0; i < len(debug.gb.ppu.VRAM); i += 16 {

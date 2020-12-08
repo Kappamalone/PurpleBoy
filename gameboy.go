@@ -2,7 +2,6 @@ package main
 
 import (
 	"time"
-
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -34,12 +33,12 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	cfile       string = "02-interrupts"
+	testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
 	skipBootrom bool   = true
 	isDebugging bool   = true
 	isLogging   bool   = false
 
-	fullrom string = "roms/gameroms/Boxxle.gb"
+	fullrom string = "roms/gameroms/Dr mario.gb"
 )
 
 func main() {
@@ -54,6 +53,7 @@ func main() {
 			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
 
 			gb.ppu.displayTileset()
+			//gb.ppu.displayCurrTileMap()
 		}
 
 		for i := 0; i < cyclesPerFrame; i++ {

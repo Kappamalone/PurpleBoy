@@ -22,7 +22,8 @@ func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	if mmu.bootromEnabled {
 		mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 	}
-	mmu.loadFullRom(fullrom)
+	//mmu.loadFullRom(fullrom)
+	mmu.loadFullRom(testrom)
 	return mmu
 }
 
@@ -34,15 +35,14 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	if inRange(addr,0x0000,0x3FFF) {
 		//16KB ROM Bank 00
-		mmu.ram[addr] = data
+		//mmu.ram[addr] = data
 
 	} else if inRange(addr,0x4000,0x7FFF) {
 		//16KB ROM Bank 01~NN
-		mmu.ram[addr] = data
+		//mmu.ram[addr] = data
 
 	} else if inRange(addr,0x8000,0x9FFF) {
 		//8KB VRAM
-		//mmu.gb.ppu.writeVRAM(addr-0x8000, data)
 		mmu.gb.ppu.VRAM[addr - 0x8000] = data
 
 	} else if inRange(addr,0xA000,0xBFFF){
@@ -99,6 +99,8 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			//LY is read only
 		case 0xFF45:
 			mmu.gb.ppu.LYC = data
+		case 0xFF47:
+			mmu.ram[addr] = data
 		case 0xFF4A:
 			mmu.gb.ppu.WY = data
 		case 0xFF4B:
@@ -106,6 +108,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF50:
 			mmu.bootromEnabled = (data == 0) //Bootrom writes a non-zero value here to unmap bootrom from memory
 		default:
+			//mmu.gb.debug.logWrite(addr)
 			mmu.ram[addr] = data
 		}
 
@@ -195,11 +198,14 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.LY
 		case 0xFF45:
 			readByte = mmu.gb.ppu.LYC
+		case 0xFF47:
+			readByte = mmu.ram[addr]
 		case 0xFF4A:
 			readByte = mmu.gb.ppu.WY
 		case 0xFF4B:
 			readByte = mmu.gb.ppu.WX
 		default:
+			//mmu.gb.debug.logRead(addr)
 			readByte = mmu.ram[addr]
 		}
 

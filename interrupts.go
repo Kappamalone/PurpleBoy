@@ -5,9 +5,11 @@ func (cpu *gameboyCPU) handleInterrupts() {
 	if !cpu.IME {
 		return
 	}
+
 	//Handle an interupt if interrupt exists
 	if cpu.IE != 0 && cpu.IF != 0 {
 		cpu.PUSH(cpu.PC)
+		cpu.HALT = false
 
 		if bitSet(cpu.IE, 0) && bitSet(cpu.IF, 0) {
 			cpu.VBlank()
@@ -20,7 +22,7 @@ func (cpu *gameboyCPU) handleInterrupts() {
 		} else if bitSet(cpu.IE, 4) && bitSet(cpu.IF, 4) {
 			cpu.JOYPAD()
 		}
-
+		
 		cpu.cycles += 20 //Takes a total of 5 machine cycles
 	}
 }
@@ -31,6 +33,7 @@ The general gist of handling these 5 interrupts are as follows.
 2) Jump to a INT VEC
 3) Disable IME to prevent any more interrupts from being serviced
 */
+
 func (cpu *gameboyCPU) VBlank() {
 	//V-blank
 	cpu.IF &= (0xFF-0x01)

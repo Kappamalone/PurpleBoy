@@ -147,37 +147,38 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	if skipBootrom {
 		cpu.skipBootrom()
 	}
-	
+
 	return cpu
 }
 
 func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
-
 	//Handle interrupts
 	//TODO: Is this checked every tick?
 	cpu.handleInterrupts()
 
-	if cpu.cycles == 0 {
-		if isLogging {
-			cpu.gb.debug.logTrace()
+	if !cpu.HALT {
+		if cpu.cycles == 0 {
+			if isLogging {
+				cpu.gb.debug.logTrace()
+			}
+	
+			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
+			cpu.PC++
+	
+			if fetchedInstruction == 0xCB {
+				//add cycles for CB-prefix
+				cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
+			} else {
+				//add cycles for regular instruction
+				cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
+			}
+	
+			cpu.decodeAndExecute(fetchedInstruction)
+	
 		}
-
-		fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
-		cpu.PC++
-
-		if fetchedInstruction == 0xCB {
-			//add cycles for CB-prefix
-			cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
-		} else {
-			//add cycles for regular instruction
-			cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
-		}
-
-		cpu.decodeAndExecute(fetchedInstruction)
-
+		cpu.cycles--
 	}
-	cpu.cycles--
 }
 
 func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
