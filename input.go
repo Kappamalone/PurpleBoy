@@ -4,10 +4,6 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-var (
-	subWindowID uint32 = 0
-)
-
 func handleInput() bool {
 	endProgram := false
 	if !isDebugging {
