@@ -3,6 +3,9 @@ package main
 func (cpu *gameboyCPU) handleInterrupts() {
 	//Interrupt service routine
 	if !cpu.IME {
+		if cpu.IE != 0 && cpu.IF != 0 {
+			cpu.HALT = false
+		}
 		return
 	}
 

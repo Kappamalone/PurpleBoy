@@ -147,21 +147,21 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	if skipBootrom {
 		cpu.skipBootrom()
 	}
-
+	cpu.gb.mmu.ram[0xFF00] = 0xFF //Temp Joypad MMIO stub
 	return cpu
 }
 
 func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
-	//Handle interrupts
-	//TODO: Is this checked every tick?
-	cpu.handleInterrupts()
-
+	
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
 			if isLogging {
-				cpu.gb.debug.logTrace()
+				//cpu.gb.debug.logTrace()
+				cpu.gb.debug.logValue(cpu.PC)
 			}
+			
+			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
 	
 			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
 			cpu.PC++
@@ -178,6 +178,9 @@ func (cpu *gameboyCPU) tick() {
 	
 		}
 		cpu.cycles--
+	} else {
+		//Interrupts are the only way to disable HALT
+		cpu.handleInterrupts()
 	}
 }
 

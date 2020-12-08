@@ -163,29 +163,29 @@ func (ppu *PPU) tick() {
 	}
 
 	switch ppu.mode {
-	case OAMSearch: //OAM Search
+	case OAMSearch: 
 		if ppu.dotClock == 80 {
 			ppu.dotClock = -1
 			ppu.mode = LCDTransfer
-		}
-	case LCDTransfer: //LCD transfer
+		} 
+	case LCDTransfer:
 		if ppu.dotClock == 172 {
 			ppu.dotClock = -1
 			ppu.mode = Hblank
 			ppu.drawScanline()
-		}
-	case Hblank: //Hblank
+		} 
+	case Hblank:
 		if ppu.dotClock == 204 {
 			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 144 {
 				ppu.mode = Vblank
-				//ppu.gb.cpu.IF |= 0x01 //Request vblank EXCEPT for some reason it breaks everything
+				ppu.gb.cpu.IF |= 0x01 //Request vblank 
 			} else {
 				ppu.mode = OAMSearch
 			}
 		}
-	case Vblank: //Vblank
+	case Vblank:
 		if ppu.dotClock == 456 {
 			ppu.dotClock = -1
 			ppu.LY++
@@ -236,8 +236,17 @@ func (ppu *PPU) drawScanline() {
 		col := x % 8  //Which bit from the 2 bytes are drawing //POSSIBLE PROBLEM
 
 		tileNum := ppu.VRAM[tileMapOffset+tileMap+(tile)]
-		byte1 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2)]
-		byte2 := ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2) + 1]
+		byte1 := uint8(0)
+		byte2 := uint8(0)
+		if tileDataStart == 0x1000 {
+			//Signed tile access
+			byte1 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2)]
+			byte2 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2) + 1]
+		} else {
+			//Regular tile access
+			byte1 = ppu.VRAM[tileDataStart+(uint16(tileNum) * 16) + uint16(row*2)]
+			byte2 = ppu.VRAM[tileDataStart+(uint16(tileNum) * 16) + uint16(row*2) + 1]
+		}
 
 		//Get colour from palette
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)

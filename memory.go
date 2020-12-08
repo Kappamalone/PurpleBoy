@@ -22,8 +22,8 @@ func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	if mmu.bootromEnabled {
 		mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 	}
-	//mmu.loadFullRom(fullrom)
-	mmu.loadFullRom(testrom)
+	mmu.loadFullRom(fullrom)
+	//mmu.loadFullRom(testrom)
 	return mmu
 }
 
@@ -74,6 +74,8 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if inRange(addr,0xFF00,0xFF7F) {
 		switch addr {
+		case 0xFF00:
+			mmu.ram[addr] = (data & 0xF0) | (mmu.ram[addr] & 0x0F)
 		//TIMERS MMIO
 		case 0xFF04:
 			mmu.gb.cpu.timers.DIV = 0 //Writing any value to DIV resets it to 0
@@ -90,7 +92,8 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF40:
 			mmu.gb.ppu.LCDC = data
 		case 0xFF41:
-			mmu.gb.ppu.LCDSTAT = data
+			mmu.gb.ppu.LCDSTAT = data & 0xF8
+			//mmu.gb.ppu.mode = int(data & 0x03)
 		case 0xFF42:
 			mmu.gb.ppu.SCY = data
 		case 0xFF43:
@@ -189,7 +192,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		case 0xFF40:
 			readByte = mmu.gb.ppu.LCDC
 		case 0xFF41:
-			readByte = mmu.gb.ppu.LCDSTAT
+			readByte = (mmu.gb.ppu.LCDSTAT & 0xFC) | uint8(mmu.gb.ppu.mode) 
 		case 0xFF42:
 			readByte = mmu.gb.ppu.SCY
 		case 0xFF43:
