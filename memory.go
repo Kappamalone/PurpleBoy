@@ -102,6 +102,11 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			//LY is read only
 		case 0xFF45:
 			mmu.gb.ppu.LYC = data
+			if !bitSet(data,7){
+				//Disabling the ppu resets LY and sets mode to 0 (Hblank)
+				mmu.gb.ppu.LY = 0
+				mmu.gb.ppu.mode = Hblank
+			}
 		case 0xFF47:
 			mmu.ram[addr] = data
 		case 0xFF4A:

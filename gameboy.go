@@ -33,14 +33,14 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	//testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
+	testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
 	//testrom     string = "roms/testroms/ppu/dmg-acid2.gb"
-	testrom       string = "roms/testroms/misc/Cabbie.gb" 
+	//testrom       string = "roms/testroms/misc/Cabbie.gb" 
 	skipBootrom bool   = true
 	isDebugging bool   = true
 	isLogging   bool   = false
 
-	fullrom string = "roms/gameroms/tetris.gb"
+	fullrom string = "roms/gameroms/Dr mario.gb"
 )
 
 func main() {

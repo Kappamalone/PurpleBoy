@@ -179,8 +179,8 @@ func (ppu *PPU) tick() {
 			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 144 {
-				ppu.mode = Vblank
 				ppu.gb.cpu.IF |= 0x01 //Request vblank 
+				ppu.mode = Vblank
 			} else {
 				ppu.mode = OAMSearch
 			}

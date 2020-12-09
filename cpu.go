@@ -158,7 +158,7 @@ func (cpu *gameboyCPU) tick() {
 		if cpu.cycles == 0 {
 			if isLogging {
 				//cpu.gb.debug.logTrace()
-				cpu.gb.debug.logValue(cpu.PC)
+				//cpu.gb.debug.logValue(cpu.PC)
 			}
 			
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!

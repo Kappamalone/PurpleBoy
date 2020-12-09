@@ -10,24 +10,28 @@ func (cpu *gameboyCPU) handleInterrupts() {
 	}
 
 	//Handle an interupt if interrupt exists
-	if cpu.IE != 0 && cpu.IF != 0 {
+	if bitSet(cpu.IE, 0) && bitSet(cpu.IF, 0) {
 		cpu.PUSH(cpu.PC)
-		cpu.HALT = false
-
-		if bitSet(cpu.IE, 0) && bitSet(cpu.IF, 0) {
-			cpu.VBlank()
-		} else if bitSet(cpu.IE, 1) && bitSet(cpu.IF, 1) {
-			cpu.LCDSTAT()
-		} else if bitSet(cpu.IE, 2) && bitSet(cpu.IF, 2) {
-			cpu.TIMER()
-		} else if bitSet(cpu.IE, 3) && bitSet(cpu.IF, 3) {
-			cpu.SERIAL()
-		} else if bitSet(cpu.IE, 4) && bitSet(cpu.IF, 4) {
-			cpu.JOYPAD()
-		}
-		
+		cpu.VBlank()
+		cpu.cycles += 20 //Takes a total of 5 machine cycles
+	} else if bitSet(cpu.IE, 1) && bitSet(cpu.IF, 1) {
+		cpu.PUSH(cpu.PC)
+		cpu.LCDSTAT()
+		cpu.cycles += 20 //Takes a total of 5 machine cycles
+	} else if bitSet(cpu.IE, 2) && bitSet(cpu.IF, 2) {
+		cpu.PUSH(cpu.PC)
+		cpu.TIMER()
+		cpu.cycles += 20 //Takes a total of 5 machine cycles
+	} else if bitSet(cpu.IE, 3) && bitSet(cpu.IF, 3) {
+		cpu.PUSH(cpu.PC)
+		cpu.SERIAL()
+		cpu.cycles += 20 //Takes a total of 5 machine cycles
+	} else if bitSet(cpu.IE, 4) && bitSet(cpu.IF, 4) {
+		cpu.PUSH(cpu.PC)
+		cpu.JOYPAD()
 		cpu.cycles += 20 //Takes a total of 5 machine cycles
 	}
+
 }
 
 /*
