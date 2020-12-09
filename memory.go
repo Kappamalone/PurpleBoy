@@ -22,8 +22,8 @@ func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	if mmu.bootromEnabled {
 		mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 	}
-	mmu.loadFullRom(fullrom)
-	//mmu.loadFullRom(testrom)
+	//mmu.loadFullRom(fullrom)
+	mmu.loadFullRom(testrom)
 	return mmu
 }
 

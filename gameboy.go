@@ -33,8 +33,6 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	//TODO: Fix Dr mario not going into demo!
-
 	testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
 	//testrom     string = "roms/testroms/ppu/dmg-acid2.gb"
 	//testrom       string = "roms/testroms/misc/Cabbie.gb" 
@@ -63,10 +61,14 @@ func main() {
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
 			gb.cpu.tick()
-			gb.ppu.tick() 
+			gb.ppu.tick()
 
-			//gb.cpu.timers.handleTimers()
-
+			//For timers, if we update them 273 times every 1/60th of a second,
+			//Then the update timer function will be called at a rate of 16380hz,
+			//Which is close enough :P
+			if i % 256 == 0 {
+				gb.cpu.timers.handleTimers()
+			}
 		}
 		if handleInput() {
 			ticker.Stop() //Stop ticker to exit program

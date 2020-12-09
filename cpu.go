@@ -142,7 +142,7 @@ func (cpu *gameboyCPU) initMaps() {
 func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	cpu := new(gameboyCPU)
 	cpu.gb = gb
-	cpu.timers = new(timers)
+	cpu.timers = initTimers(cpu)
 	cpu.initMaps()
 	if skipBootrom {
 		cpu.skipBootrom()
