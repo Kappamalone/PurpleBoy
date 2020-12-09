@@ -33,6 +33,8 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
+	//TODO: Fix Dr mario not going into demo!
+
 	testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
 	//testrom     string = "roms/testroms/ppu/dmg-acid2.gb"
 	//testrom       string = "roms/testroms/misc/Cabbie.gb" 

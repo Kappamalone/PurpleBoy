@@ -159,6 +159,8 @@ func (ppu *PPU) tick() {
 	//TODO: proper cpu privileges when accessing data
 	ppu.ppuEnabled = bitSet(ppu.LCDC, 7)
 	if !ppu.ppuEnabled {
+		ppu.mode = Hblank
+		ppu.LY = 0
 		return
 	}
 
