@@ -165,11 +165,16 @@ func (ppu *PPU) tick() {
 	}
 
 	switch ppu.mode {
+	//Request LCDSTAT interrupts if corresponding bit set in LCDSTAT
 	case OAMSearch: 
 		if ppu.dotClock == 80 {
 			ppu.dotClock = -1
 			ppu.mode = LCDTransfer
-		} 
+		} else if isZero(ppu.dotClock){
+			if bitSet(ppu.LCDSTAT,5){
+				ppu.gb.cpu.IF |= 0x2
+			}
+		}
 	case LCDTransfer:
 		if ppu.dotClock == 172 {
 			ppu.dotClock = -1
@@ -186,6 +191,10 @@ func (ppu *PPU) tick() {
 			} else {
 				ppu.mode = OAMSearch
 			}
+		} else if isZero(ppu.dotClock){
+			if bitSet(ppu.LCDSTAT,3){
+				ppu.gb.cpu.IF |= 0x2
+			}
 		}
 	case Vblank:
 		if ppu.dotClock == 456 {
@@ -195,6 +204,10 @@ func (ppu *PPU) tick() {
 				ppu.drawBuffer(ppu.renderer, ppu.texture, ppu.frameBuffer, screenWidth)
 				ppu.LY = 0
 				ppu.mode = OAMSearch
+			}
+		} else if isZero(ppu.dotClock){
+			if bitSet(ppu.LCDSTAT,4){
+				ppu.gb.cpu.IF |= 0x2
 			}
 		}
 

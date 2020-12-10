@@ -88,6 +88,10 @@ func inRange(value uint16,lowerBound uint16, upperBound uint16) bool {
 	return value >= lowerBound && value <= upperBound
 }
 
+func isZero(value int) bool {
+	return value == 0
+}
+
 func addSigned(opcode uint16, signedValue uint8) uint16 {
 	//This new method I found courtesy of the emudev discord server is a lot cleaner
 	//Basically we convert the uint8 => int8 so that the compiler knows its signed

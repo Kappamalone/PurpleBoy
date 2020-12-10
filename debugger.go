@@ -84,7 +84,7 @@ func (debug *debugger) logTrace() {
 }
 
 func (debug *debugger) logValue(value1 uint16) {
-	log.Printf("%04X",value1)
+	log.Printf("%d",value1)
 }
 
 func (debug *debugger) logRead(value1 uint16) {

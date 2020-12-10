@@ -6,7 +6,7 @@ var (
 )
 func (cpu *gameboyCPU) handleInterrupts() {
 	//Interrupt service routine
-	if cpu.IE != 0 && cpu.IF != 0 {
+	if (cpu.IE & cpu.IF) != 0 {
 		cpu.HALT = false
 	}
 
@@ -15,11 +15,11 @@ func (cpu *gameboyCPU) handleInterrupts() {
 	}
 
 	//Handle an interupt if interrupt exists
-	if cpu.IE != 0 && cpu.IF != 0 {
+	if (cpu.IE & cpu.IF) != 0 {
 		for bit := 0; bit < 5; bit++ {
 			if bitSet(cpu.IE,uint8(bit)) && bitSet(cpu.IF,uint8(bit)){
 				cpu.PUSH(cpu.PC)
-				cpu.IF &^= (1 << bit)
+				cpu.IF &= ^(1 << bit)
 				cpu.PC = uint16(0x0040 + (0x8 * bit))
 				cpu.IME = false
 				cpu.cycles += 20
@@ -27,6 +27,8 @@ func (cpu *gameboyCPU) handleInterrupts() {
 				if isDebugging {
 					cpu.gb.debug.printConsole(interrupts[bit] + "\n","cyan")
 				}
+
+				break //Only service one interrupt at a time
 			}
 		}
 	}

@@ -181,6 +181,7 @@ func (cpu *gameboyCPU) tick() {
 	} else {
 		//Interrupts are the only way to disable HALT
 		cpu.handleInterrupts()
+
 	}
 }
 

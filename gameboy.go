@@ -2,6 +2,7 @@ package main
 
 import (
 	"time"
+
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -23,7 +24,7 @@ type gameboy struct {
 func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
-	gb.mmu = initMemory(gb,skipBootrom)
+	gb.mmu = initMemory(gb, skipBootrom)
 	gb.cpu = initCPU(gb, skipBootrom)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)
@@ -33,14 +34,14 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	testrom     string = "roms/testroms/cpu_instrs/02-interrupts.gb"
-	//testrom     string = "roms/testroms/ppu/dmg-acid2.gb"
-	//testrom       string = "roms/testroms/misc/Cabbie.gb" 
-	skipBootrom bool   = true
-	isDebugging bool   = true
-	isLogging   bool   = false
+	testrom string = "roms/testroms/cpu_instrs/02-interrupts.gb"
+	//testrom   string = "roms/testroms/ppu/dmg-acid2.gb"
+	//testrom   string = "roms/testroms/misc/Cabbie.gb"
+	skipBootrom bool = true
+	isDebugging bool = true
+	isLogging   bool = false
 
-	fullrom string = "roms/gameroms/Dr mario.gb"
+	fullrom string = "roms/gameroms/Tetris.gb"
 )
 
 func main() {
@@ -61,14 +62,9 @@ func main() {
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
 			gb.cpu.tick()
+			gb.cpu.timers.handleTimers()
 			gb.ppu.tick()
 
-			//For timers, if we update them 273 times every 1/60th of a second,
-			//Then the update timer function will be called at a rate of 16380hz,
-			//Which is close enough :P
-			if i % 256 == 0 {
-				gb.cpu.timers.handleTimers()
-			}
 		}
 		if handleInput() {
 			ticker.Stop() //Stop ticker to exit program
