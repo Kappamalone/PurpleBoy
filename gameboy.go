@@ -39,7 +39,7 @@ var (
 	//testrom   string = "roms/testroms/misc/Cabbie.gb"
 	skipBootrom bool = true
 	isDebugging bool = true
-	isLogging   bool = false
+	isLogging   bool = true
 
 	fullrom string = "roms/gameroms/Tetris.gb"
 )
@@ -61,7 +61,7 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
-			gb.cpu.tick()
+			gb.cpu.tick(i)
 			gb.cpu.timers.handleTimers()
 			gb.ppu.tick()
 

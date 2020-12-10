@@ -24,23 +24,15 @@ func initTimers(cpu *gameboyCPU) *timers {
 
 func (timers *timers) handleTimers() {
 	if bitSet(timers.TAC,2){
-
-		if timers.clock == frequency[timers.TAC & 0x3]{
-
+		if timers.clock == frequency[timers.TAC & 0x3] {
 			if timers.TIMA == 0xFF {
-
 				timers.TIMA = timers.TMA
 				timers.cpu.IF |= 0x4
-				timers.cpu.gb.debug.printConsole("hahahaha\n","red")
 			} else {
-
 				timers.TIMA++
 			}
-			timers.clock = 0
-		}
+			timers.clock = -1
+		} 
 		timers.clock++
-	} else {
-
-		timers.clock = 0
 	}
 }

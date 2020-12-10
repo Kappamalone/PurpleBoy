@@ -151,7 +151,7 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	return cpu
 }
 
-func (cpu *gameboyCPU) tick() {
+func (cpu *gameboyCPU) tick(cycle int) {
 	//Run one tick of the gameboy's cpu
 	
 	if !cpu.HALT {
