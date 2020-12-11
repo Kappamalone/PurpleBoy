@@ -9,6 +9,7 @@ type timers struct {
 	cpu *gameboyCPU
 
 	clock      int
+	divClock   int
 	DIV        uint8 //Incremented at a flat rate of 16384 hz
 	TIMA       uint8 //Incremented at rate specified by Timer control
 	TMA        uint8 //When TIMA overflows, this data is loaded
@@ -22,7 +23,7 @@ func initTimers(cpu *gameboyCPU) *timers {
 	return timers
 }
 
-func (timers *timers) handleTimers() {
+func (timers *timers) tick() {
 	if bitSet(timers.TAC,2){
 		if timers.clock == frequency[timers.TAC & 0x3] {
 			if timers.TIMA == 0xFF {
@@ -31,8 +32,14 @@ func (timers *timers) handleTimers() {
 			} else {
 				timers.TIMA++
 			}
-			timers.clock = -1
+			timers.clock = 0
 		} 
 		timers.clock++
 	}
+
+	if timers.divClock == 256 {
+		timers.DIV++
+		timers.divClock = 0
+	}
+	timers.divClock++
 }

@@ -87,6 +87,10 @@ func (debug *debugger) logValue(value1 uint16) {
 	log.Printf("%d",value1)
 }
 
+func (debug *debugger) logiValue(value int){
+	log.Printf("%d",value)
+}
+
 func (debug *debugger) logRead(value1 uint16) {
 	log.Printf("Reading MMIO: %04X",value1)
 }

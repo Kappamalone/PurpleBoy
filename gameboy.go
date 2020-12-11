@@ -34,7 +34,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 }
 
 var (
-	testrom string = "roms/testroms/cpu_instrs/02-interrupts.gb"
+	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	//testrom   string = "roms/testroms/ppu/dmg-acid2.gb"
 	//testrom   string = "roms/testroms/misc/Cabbie.gb"
 	skipBootrom bool = true
@@ -61,9 +61,9 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
-			gb.cpu.tick(i)
-			gb.cpu.timers.handleTimers()
+			gb.cpu.tick()
 			gb.ppu.tick()
+			gb.cpu.timers.tick()
 
 		}
 		if handleInput() {

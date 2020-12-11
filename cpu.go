@@ -36,7 +36,7 @@ var regularInstructionTiming = [256]int{
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-	2, 2, 2, 2, 2, 2, 0, 2, 1, 1, 1, 1, 1, 1, 2, 1,
+	2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
@@ -151,18 +151,16 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	return cpu
 }
 
-func (cpu *gameboyCPU) tick(cycle int) {
+func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
-	
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
 			if isLogging {
-				//cpu.gb.debug.logTrace()
+				cpu.gb.debug.logTrace()
 				//cpu.gb.debug.logValue(cpu.PC)
 			}
-			
+
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
-	
 			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
 			cpu.PC++
 	
@@ -173,15 +171,12 @@ func (cpu *gameboyCPU) tick(cycle int) {
 				//add cycles for regular instruction
 				cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
 			}
-	
 			cpu.decodeAndExecute(fetchedInstruction)
-	
 		}
 		cpu.cycles--
 	} else {
 		//Interrupts are the only way to disable HALT
 		cpu.handleInterrupts()
-
 	}
 }
 
@@ -420,7 +415,8 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.RST(opcode & 0x38)
 
 	} else {
-		cpu.gb.debug.printConsole("ILLEGAL OPCODE!\n", "cyan")
+		if isDebugging {
+			cpu.gb.debug.printConsole("ILLEGAL OPCODE!\n", "cyan")
+		}
 	}
-
 }

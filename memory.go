@@ -79,6 +79,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		//TIMERS MMIO
 		case 0xFF04:
 			mmu.gb.cpu.timers.DIV = 0 //Writing any value to DIV resets it to 0
+			mmu.gb.cpu.timers.divClock = 0
 		case 0xFF05:
 			mmu.gb.cpu.timers.TIMA = data
 		case 0xFF06:
