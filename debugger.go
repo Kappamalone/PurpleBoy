@@ -26,8 +26,10 @@ type debugger struct {
 
 	cpuState   *widgets.Paragraph //CPU Internal registers
 	consoleOut *widgets.Paragraph //Console for debug info
+	firedInterrupts *widgets.Paragraph
 
 	console []string //Data to be rendered by console
+	interrupts []string //Data to be rendered by firedInterrupts
 }
 
 func createWidget(title string, colour ui.Color, dimensions [4]int) *widgets.Paragraph {
@@ -54,10 +56,10 @@ func initDebugger(gb *gameboy, isLogging bool) *debugger {
 	debug.gb = gb
 
 	//Initialise termui
-	err := ui.Init()
-	checkErr(err, "Failed to intialise termui")
+	checkErr(ui.Init(), "Failed to intialise termui")
 	debug.cpuState = createWidget("[CPU STATE]", ui.ColorGreen, [4]int{116, 0, 143, 33})
-	debug.consoleOut = createWidget("[CONSOLE]", ui.ColorGreen, [4]int{0, 33, 143, 52})
+	debug.consoleOut = createWidget("[CONSOLE]", ui.ColorGreen, [4]int{0, 33, 116, 52})
+	debug.firedInterrupts = createWidget("[Interrupts Fired]",ui.ColorGreen,[4]int{116,33,143,52})
 	debug.displayLogo()
 
 	//Create a file for logging
@@ -83,22 +85,18 @@ func (debug *debugger) logTrace() {
 	//log.Printf("PC: %04X",debug.gb.cpu.PC)
 }
 
-func (debug *debugger) logValue(value1 uint16) {
-	log.Printf("%d",value1)
+func (debug *debugger) logValue(value interface{}) {
+	switch value.(type) {
+	case uint8:
+		log.Printf("%02X",value)
+	case uint16:
+		log.Printf("%04X",value)
+	case int:
+		log.Printf("%d",value)
+	case bool:
+		log.Printf("%t",value)
+	}
 }
-
-func (debug *debugger) logiValue(value int){
-	log.Printf("%d",value)
-}
-
-func (debug *debugger) logRead(value1 uint16) {
-	log.Printf("Reading MMIO: %04X",value1)
-}
-
-func (debug *debugger) logWrite(value1 uint16) {
-	log.Printf("Writing MMIO: %04X",value1)
-}
-
 
 func (debug *debugger) logVRAM() {
 	for i := 0; i < len(debug.gb.ppu.VRAM); i += 16 {
@@ -117,6 +115,13 @@ func (debug *debugger) printConsole(data string, colour string) {
 		debug.console = debug.console[1:]
 	}
 	debug.console = append(debug.console, fmt.Sprintf("[%s](fg:%s)", data, colour))
+}
+
+func (debug *debugger) printInterrupt(interrupt string){
+	if len(debug.interrupts) > 15 {
+		debug.interrupts = debug.interrupts[1:]
+	}
+	debug.interrupts = append(debug.interrupts,fmt.Sprintf(" [%s](fg:magenta) fired off",interrupt))
 }
 
 //UPDATE DEBUG INFO
@@ -142,6 +147,7 @@ func (debug *debugger) updateDebugInformation() {
 
 	debug.cpuState.Text = strings.Join(debugCPU, "\n")
 	debug.consoleOut.Text = strings.Join(debug.console, "")
+	debug.firedInterrupts.Text = "\n" + strings.Join(debug.interrupts,"\n")
 }
 
 /*

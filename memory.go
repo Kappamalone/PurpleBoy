@@ -98,12 +98,11 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			mmu.gb.ppu.SCY = data
 		case 0xFF43:
 			mmu.gb.ppu.SCX = data
-		case 0xFF44:
-			//LY is read only
+		case 0xFF44: //LY is read only
 		case 0xFF45:
 			mmu.gb.ppu.LYC = data
 		case 0xFF47:
-			mmu.ram[addr] = data
+			mmu.gb.ppu.palette = data
 		case 0xFF4A:
 			mmu.gb.ppu.WY = data
 		case 0xFF4B:
@@ -202,7 +201,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		case 0xFF45:
 			readByte = mmu.gb.ppu.LYC
 		case 0xFF47:
-			readByte = mmu.ram[addr]
+			readByte = mmu.gb.ppu.palette
 		case 0xFF4A:
 			readByte = mmu.gb.ppu.WY
 		case 0xFF4B:
@@ -221,9 +220,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		readByte = mmu.gb.cpu.IE
 	}
 
-
 	return readByte
-
 }
 
 func (mmu *memory) readWord(addr uint16) uint16 {

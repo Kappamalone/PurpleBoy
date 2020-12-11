@@ -155,28 +155,29 @@ func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
-			if isLogging {
-				cpu.gb.debug.logTrace()
-				//cpu.gb.debug.logValue(cpu.PC)
-			}
-
+			cpu.gb.handleLogging() //Handle any logging if logging enabled
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
+
+			//Fetch, decode and execute
 			fetchedInstruction := cpu.gb.mmu.readbyte(cpu.PC)
 			cpu.PC++
-	
-			if fetchedInstruction == 0xCB {
-				//add cycles for CB-prefix
-				cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
-			} else {
-				//add cycles for regular instruction
-				cpu.cycles += regularInstructionTiming[fetchedInstruction] * 4
-			}
+			cpu.addCycles(fetchedInstruction)
 			cpu.decodeAndExecute(fetchedInstruction)
 		}
 		cpu.cycles--
 	} else {
 		//Interrupts are the only way to disable HALT
 		cpu.handleInterrupts()
+	}
+}
+
+func (cpu *gameboyCPU) addCycles(opcode uint8){
+	if opcode == 0xCB {
+		//add cycles for CB-prefix
+		cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4
+	} else {
+		//add cycles for regular instruction
+		cpu.cycles += regularInstructionTiming[opcode] * 4
 	}
 }
 

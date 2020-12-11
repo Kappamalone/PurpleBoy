@@ -1,8 +1,7 @@
 package main
 
-
 var (
-	interrupts = [5]string{"VBLANK","LCDSTAT","TIMER","SERIAL","JOYPAD"}
+	interrupts = [5]string{"VBLANK ","LCDSTAT","TIMER  ","SERIAL ","JOYPAD "}
 )
 func (cpu *gameboyCPU) handleInterrupts() {
 	//Interrupt service routine
@@ -19,13 +18,13 @@ func (cpu *gameboyCPU) handleInterrupts() {
 		for bit := 0; bit < 5; bit++ {
 			if bitSet(cpu.IE,uint8(bit)) && bitSet(cpu.IF,uint8(bit)){
 				cpu.PUSH(cpu.PC)
-				cpu.IF &= ^(1 << bit)
-				cpu.PC = uint16(0x0040 + (0x8 * bit))
-				cpu.IME = false
+				cpu.IF &= ^(1 << bit) //Disable requested interrupt
+				cpu.PC = uint16(0x0040 + (0x8 * bit)) //Jump to INT vec
+				cpu.IME = false 
 				cpu.cycles += 20
 				
 				if isDebugging {
-					cpu.gb.debug.printConsole(interrupts[bit] + "\n","cyan")
+					cpu.gb.debug.printInterrupt(interrupts[bit])
 				}
 
 				break //Only service one interrupt at a time
@@ -33,9 +32,26 @@ func (cpu *gameboyCPU) handleInterrupts() {
 		}
 	}
 }
-/*
-	The general gist of handling these 5 interrupts are as follows.
-	1) Disable interrupt request held in the IF register
-	2) Jump to a INT VEC
-	3) Disable IME to prevent any more interrupts from being serviced
-*/
+
+func (cpu *gameboyCPU) requestVblank(){
+	cpu.IF |= 0x1
+}
+
+func (cpu *gameboyCPU) requestSTAT(){
+	cpu.IF |= 0x2
+}
+
+func (cpu *gameboyCPU) requestTimer(){
+	cpu.IF |= 0x4
+}
+
+func (cpu *gameboyCPU) requestSerial(){
+	cpu.IF |= 0x8
+}
+
+func (cpu *gameboyCPU) requestJoypad(){
+	cpu.IF |= 0x10
+}
+
+
+

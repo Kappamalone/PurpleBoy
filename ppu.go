@@ -55,15 +55,10 @@ type PPU struct {
 	tileTexture     *sdl.Texture
 	tileFramebuffer []uint8
 
-	//Full window (debugging)
-	fullWindow      *sdl.Window
-	fullRenderer    *sdl.Renderer
-	fulltexture     *sdl.Texture
-	fullFramebuffer []uint8
-
 	//PPU internal variables
 	ppuEnabled bool
 
+	palette uint8
 	LCDC    uint8
 	LCDSTAT uint8
 
@@ -88,14 +83,9 @@ func initPPU(gb *gameboy) *PPU {
 	ppu.window, ppu.renderer = initSDL()
 	if isDebugging {
 		ppu.tileWindow, ppu.tileRenderer = initSDLDebugging()
-
 		ppu.tileFramebuffer = make([]uint8, tilewindowWidth*tilewindowHeight*4) //RGBA32
 		ppu.tileTexture, _ = ppu.tileRenderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, tilewindowWidth, tilewindowHeight)
 		ppu.tileRenderer.SetScale(tilewindowScale, tilewindowScale)
-
-		ppu.fullFramebuffer = make([]uint8, fullwindowWidth*fullwindowHeight*4) //RGBA32
-		ppu.fulltexture, _ = ppu.fullRenderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, fullwindowWidth, fullwindowHeight)
-		ppu.fullRenderer.SetScale(fullwindowScale, fullwindowScale)
 	}
 
 	ppu.renderer.SetScale(windowScale, windowScale)
@@ -114,8 +104,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	mWindowPosY := int32(sdl.WINDOWPOS_UNDEFINED)
 
 	//Initialise SDL
-	err := sdl.Init(sdl.INIT_VIDEO)
-	checkErr(err, "SDL initialisation error")
+	checkErr(sdl.Init(sdl.INIT_VIDEO), "SDL initialisation error")
 
 	//Create window
 	if isDebugging {
@@ -123,9 +112,8 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 		mWindowPosX = 13
 		mWindowPosY = 80
 	}
-	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN | sdl.WINDOW_ALWAYS_ON_TOP)
 	checkErr(err, "Window creation error")
-	window.SetResizable(true)
 
 	//Create renderer
 	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
@@ -138,21 +126,13 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 func initSDLDebugging() (*sdl.Window, *sdl.Renderer, ) {
 	//Initialises the required windows for debugging purposes
 
-	tileWindow, err := sdl.CreateWindow("Debug", 660, 80, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN)
+	tileWindow, err := sdl.CreateWindow("Debug", 660, 80, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN | sdl.WINDOW_ALWAYS_ON_TOP)
 	checkErr(err, "Debug window creation error")
-	tileWindow.SetResizable(true)
 
 	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
 	checkErr(err, "Debug renderer creation error")
 
-	//fullWindow, err := sdl.CreateWindow("Full window", 1051, 78, fullwindowWidth*fullwindowScale, fullwindowHeight*fullwindowScale, sdl.WINDOW_SHOWN)
-	checkErr(err, "Debug window creation error")
-
-	//fullRenderer, err := sdl.CreateRenderer(fullWindow, -1, sdl.RENDERER_ACCELERATED)
-	checkErr(err, "Debug renderer creation error")
-
-	return tileWindow, tileRenderer //, fullWindow, fullRenderer
-
+	return tileWindow, tileRenderer
 }
 
 func (ppu *PPU) tick() {
@@ -172,7 +152,7 @@ func (ppu *PPU) tick() {
 			ppu.mode = LCDTransfer
 		} else if isZero(ppu.dotClock){
 			if bitSet(ppu.LCDSTAT,5){
-				ppu.gb.cpu.IF |= 0x2
+				ppu.gb.cpu.requestSTAT()
 			}
 		}
 	case LCDTransfer:
@@ -186,14 +166,14 @@ func (ppu *PPU) tick() {
 			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 144 {
-				ppu.gb.cpu.IF |= 0x01 //Request vblank 
+				ppu.gb.cpu.requestVblank() 
 				ppu.mode = Vblank
 			} else {
 				ppu.mode = OAMSearch
 			}
 		} else if isZero(ppu.dotClock){
 			if bitSet(ppu.LCDSTAT,3){
-				ppu.gb.cpu.IF |= 0x2
+				ppu.gb.cpu.requestSTAT()
 			}
 		}
 	case Vblank:
@@ -207,7 +187,7 @@ func (ppu *PPU) tick() {
 			}
 		} else if isZero(ppu.dotClock){
 			if bitSet(ppu.LCDSTAT,4){
-				ppu.gb.cpu.IF |= 0x2
+				ppu.gb.cpu.requestSTAT()
 			}
 		}
 
@@ -239,8 +219,6 @@ func (ppu *PPU) drawScanline() {
 		tileDataStart = 0x0000
 	}
 
-	palette := ppu.gb.mmu.readbyte(0xFF47)
-
 	ycoordOffset := int(ppu.LY + ppu.SCY)
 	row := ycoordOffset % 8                     //Which row of the tile is used for the line
 	tileMapOffset := (ycoordOffset / 8) * 32   //Offset for the tilemap
@@ -265,7 +243,7 @@ func (ppu *PPU) drawScanline() {
 
 		//Get colour from palette
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
-		colour := colours[(palette>>(colourIndex*2))&0x3]
+		colour := colours[(ppu.palette>>(colourIndex*2))&0x3]
 
 		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
 
@@ -299,9 +277,8 @@ func (ppu *PPU) drawTile(framebuffer []uint8, lineWidth int, bitmap []uint8, til
 		byte2 := bitmap[row*2+1]
 		for col := 0; col < 8; col++ {
 			//Get colour from palette
-			palette := ppu.gb.mmu.readbyte(0xFF47)
 			colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
-			colour := colours[(palette>>(colourIndex*2))&0x3]
+			colour := colours[(ppu.palette>>(colourIndex*2))&0x3]
 			ppu.drawPixel(framebuffer, lineWidth, baseCol+col, baseRow+row, colour)
 		}
 	}
@@ -315,38 +292,6 @@ func (ppu *PPU) displayTileset() {
 	}
 
 	ppu.drawBuffer(ppu.tileRenderer, ppu.tileTexture, ppu.tileFramebuffer, tilewindowWidth)
-}
-
-func (ppu *PPU) displayCurrTileMap(){
-	for i := 0; i < 32*32; i++ {
-		//Loop through each of the 32 x 32 tiles in one of the tilemaps
-
-		tileMap := 0x1800 //0x9800
-		if bitSet(ppu.LCDC,3) {
-			tileMap = 0x1C00 //0x9C00
-		}
-
-		tileDataStart := uint16(0x1000) //0x9000
-		if bitSet(ppu.LCDC, 4) { 
-			tileDataStart = 0x0000 
-		}
-
-		tileDataStart = uint16(0x1000) //Temp fix?
-
-		
-		if tileDataStart == 0x0000 {
-			//Unsigned tile access
-			tileNum := ppu.VRAM[tileMap + i] //Get tile num from tilemap
-			tileDataIndex := tileNum * 16 //Get index to start of tile in vram
-			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)
-		} else if tileDataStart == 0x1000 {
-			//Signed tile access
-			tileNum := ppu.VRAM[tileMap + i] //Get tile num from tilemap
-			tileDataIndex := tileDataStart + uint16(int16(int8(uint8(tileNum)))) * 16
-			ppu.drawTile(ppu.fullFramebuffer,fullwindowWidth,ppu.VRAM[tileDataIndex:tileDataIndex+16],i)  
-		}
-	}
-	ppu.drawBuffer(ppu.fullRenderer, ppu.fulltexture, ppu.fullFramebuffer, fullwindowWidth)
 }
 /*
 Some self documentation just to wrap my head around these ppu concepts:

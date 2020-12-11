@@ -14,6 +14,15 @@ const (
 	cyclesPerFrame = clockspeed / 60
 )
 
+var (
+	skipBootrom bool = true
+	isDebugging bool = true
+	isLogging   bool = false
+
+	testrom string = "roms/testroms/cpu_instrs/02-interrupts.gb"
+	fullrom string = "roms/gameroms/Dr mario.gb"
+)
+
 type gameboy struct {
 	cpu   *gameboyCPU
 	ppu   *PPU
@@ -33,31 +42,33 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	return gb
 }
 
-var (
-	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
-	//testrom   string = "roms/testroms/ppu/dmg-acid2.gb"
-	//testrom   string = "roms/testroms/misc/Cabbie.gb"
-	skipBootrom bool = true
-	isDebugging bool = true
-	isLogging   bool = true
+func (gb *gameboy) handleDebug(){
+	if isDebugging {
+		gb.debug.updateDebugInformation()
+		ui.Render(gb.debug.cpuState, gb.debug.consoleOut,gb.debug.firedInterrupts)
 
-	fullrom string = "roms/gameroms/Tetris.gb"
-)
+		gb.ppu.displayTileset()
+	}
+}
+
+func (gb *gameboy) handleLogging(){
+	if isLogging {
+		gb.debug.logTrace()
+		//gb.debug.logValue(cpu.PC)
+	}
+}
 
 func main() {
 	gb := initGameboy(skipBootrom, isDebugging)
 	ticker := time.NewTicker(16 * time.Millisecond)
 
+	if isLogging {
+		gb.debug.printConsole("Logging Enabled!\n","green")
+	}
+
 	//One frame
 	for range ticker.C {
-
-		if isDebugging {
-			gb.debug.updateDebugInformation()
-			ui.Render(gb.debug.cpuState, gb.debug.consoleOut)
-
-			gb.ppu.displayTileset()
-			//gb.ppu.displayCurrTileMap()
-		}
+		gb.handleDebug()
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
