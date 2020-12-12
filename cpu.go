@@ -1,10 +1,9 @@
 package main
 
-import (
-)
+import ()
 
 type gameboyCPU struct {
-	gb *gameboy
+	gb     *gameboy
 	timers *timers
 
 	AF, BC, DE, HL, SP, PC uint16
@@ -74,7 +73,7 @@ func (cpu *gameboyCPU) skipBootrom() {
 	cpu.DE = 0x00D8
 	cpu.HL = 0x014D
 	cpu.gb.ppu.LCDC = 0x91
-	cpu.gb.mmu.writebyte(0xFF47,0xFC) //Palette
+	cpu.gb.mmu.writebyte(0xFF47, 0xFC) //Palette
 }
 
 func (cpu *gameboyCPU) initMaps() {
@@ -175,7 +174,7 @@ func (cpu *gameboyCPU) tick(cycle int) {
 	}
 }
 
-func (cpu *gameboyCPU) addCycles(opcode uint8){
+func (cpu *gameboyCPU) addCycles(opcode uint8) {
 	if opcode == 0xCB {
 		//add cycles for CB-prefix
 		cpu.cycles += extendedInstructionTiming[cpu.gb.mmu.readbyte(cpu.PC)] * 4

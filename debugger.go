@@ -24,11 +24,11 @@ var (
 type debugger struct {
 	gb *gameboy
 
-	cpuState   *widgets.Paragraph //CPU Internal registers
-	consoleOut *widgets.Paragraph //Console for debug info
+	cpuState        *widgets.Paragraph //CPU Internal registers
+	consoleOut      *widgets.Paragraph //Console for debug info
 	firedInterrupts *widgets.Paragraph
 
-	console []string //Data to be rendered by console
+	console    []string //Data to be rendered by console
 	interrupts []string //Data to be rendered by firedInterrupts
 }
 
@@ -51,15 +51,15 @@ func (debug *debugger) displayLogo() {
 	debug.printConsole("\n", "cyan")
 
 	//Display title
-	title := make([]string,0)
+	title := make([]string, 0)
 	for i := 0; i < 16; i++ {
 		char := debug.gb.mmu.readbyte(uint16(0x134 + i))
 		if char != 0 {
-			title = append(title,fmt.Sprintf("%c",char))
+			title = append(title, fmt.Sprintf("%c", char))
 		}
 	}
-	debug.printConsole("Playing: " + strings.Join(title,"") + "\n","green")
-	debug.printConsole(fmt.Sprintf("MBC: 0x%02X\n",debug.gb.mmu.cart.mbc),"green")
+	debug.printConsole("Playing: "+strings.Join(title, "")+"\n", "green")
+	debug.printConsole(fmt.Sprintf("MBC: 0x%02X\n", debug.gb.mmu.cart.MBC), "green")
 }
 
 func initDebugger(gb *gameboy, isLogging bool) *debugger {
@@ -70,7 +70,7 @@ func initDebugger(gb *gameboy, isLogging bool) *debugger {
 	checkErr(ui.Init(), "Failed to intialise termui")
 	debug.cpuState = createWidget("[CPU STATE]", ui.ColorGreen, [4]int{116, 0, 143, 33})
 	debug.consoleOut = createWidget("[CONSOLE]", ui.ColorGreen, [4]int{0, 33, 116, 52})
-	debug.firedInterrupts = createWidget("[Interrupts Fired]",ui.ColorGreen,[4]int{116,33,143,52})
+	debug.firedInterrupts = createWidget("[Interrupts Fired]", ui.ColorGreen, [4]int{116, 33, 143, 52})
 	debug.displayLogo()
 
 	//Create a file for logging
@@ -98,13 +98,13 @@ func (debug *debugger) logTrace() {
 func (debug *debugger) logValue(value interface{}) {
 	switch value.(type) {
 	case uint8:
-		log.Printf("%02X",value)
+		log.Printf("%02X", value)
 	case uint16:
-		log.Printf("%04X",value)
+		log.Printf("%04X", value)
 	case int:
-		log.Printf("%d",value)
+		log.Printf("%d", value)
 	case bool:
-		log.Printf("%t",value)
+		log.Printf("%t", value)
 	}
 }
 
@@ -125,7 +125,7 @@ func (debug *debugger) printConsole(data interface{}, colour string) {
 		debug.console = debug.console[1:]
 	}
 
-	switch data.(type){
+	switch data.(type) {
 	case string:
 		debug.console = append(debug.console, fmt.Sprintf("[%s](fg:%s)", data, colour))
 	case int:
@@ -137,11 +137,11 @@ func (debug *debugger) printConsole(data interface{}, colour string) {
 	}
 }
 
-func (debug *debugger) printInterrupt(interrupt string){
+func (debug *debugger) printInterrupt(interrupt string) {
 	if len(debug.interrupts) > 15 {
 		debug.interrupts = debug.interrupts[1:]
 	}
-	debug.interrupts = append(debug.interrupts,fmt.Sprintf(" [%s](fg:magenta) fired off",interrupt))
+	debug.interrupts = append(debug.interrupts, fmt.Sprintf(" [%s](fg:magenta) fired off", interrupt))
 }
 
 //UPDATE DEBUG INFO
@@ -164,10 +164,9 @@ func (debug *debugger) updateDebugInformation() {
 	debugCPU = append(debugCPU, fmt.Sprintf(" [IME](fg:cyan) = [%d](fg:yellow)     [HALT](fg:cyan) = [%d](fg:yellow)\n", boolToInt(debug.gb.cpu.IME), boolToInt(debug.gb.cpu.HALT)))
 	debugCPU = append(debugCPU, fmt.Sprintf(" [IF](fg:cyan) = $[%02X](fg:yellow)    [IE](fg:cyan) = $[%02X](fg:yellow)", debug.gb.cpu.IF, debug.gb.cpu.IE))
 
-
 	debug.cpuState.Text = strings.Join(debugCPU, "\n")
 	debug.consoleOut.Text = strings.Join(debug.console, "")
-	debug.firedInterrupts.Text = "\n" + strings.Join(debug.interrupts,"\n")
+	debug.firedInterrupts.Text = "\n" + strings.Join(debug.interrupts, "\n")
 }
 
 /*

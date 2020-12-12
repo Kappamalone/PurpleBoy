@@ -5,8 +5,8 @@ import (
 )
 
 type memory struct {
-	gb  *gameboy
-	cart *cartridge
+	gb             *gameboy
+	cart           *cartridge
 	bootromEnabled bool //Used to map bootrom
 
 	bootrom [0x100]uint8 //DMG Bootrom
@@ -15,13 +15,13 @@ type memory struct {
 	//CARTRIDGE: 8KB ram bank
 	//CARTRIDGE: 4KB WRAM !CGB ONLY
 
-	WRAM    []uint8         //WRAM
-	OAM     [0x100]uint8    //Object attribute memory aka sprite data
-	MMIO    [0x80]uint8     //Memory mapped input output
-	HRAM    [0x7F]uint8     //High ram
+	WRAM []uint8      //WRAM
+	OAM  [0x100]uint8 //Object attribute memory aka sprite data
+	MMIO [0x80]uint8  //Memory mapped input output
+	HRAM [0x7F]uint8  //High ram
 }
 
-func initMemory(gb *gameboy,skipBootrom bool) *memory {
+func initMemory(gb *gameboy, skipBootrom bool) *memory {
 	mmu := new(memory)
 	mmu.gb = gb
 	mmu.bootromEnabled = !skipBootrom
@@ -37,7 +37,7 @@ func initMemory(gb *gameboy,skipBootrom bool) *memory {
 func (mmu *memory) initWRAM() {
 	//Change this if CGB
 	//Initialises 8kb of WRAM
-	mmu.WRAM = make([]uint8,0x2000)
+	mmu.WRAM = make([]uint8, 0x2000)
 }
 
 //MMU LOGIC---------------------------
@@ -45,35 +45,34 @@ func (mmu *memory) initWRAM() {
 func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//Implements the memory map from the pandocs
 	//TODO: make sure to return ppu mode for 0xFF41
-
-	if inRange(addr,0x0000,0x7FFF) {
+	if inRange(addr, 0x0000, 0x7FFF) {
 		//16KB ROM Bank 00
-		mmu.cart.handleRomWrites(addr,data)
+		mmu.cart.handleRomWrites(addr, data)
 
-	} else if inRange(addr,0x8000,0x9FFF) {
+	} else if inRange(addr, 0x8000, 0x9FFF) {
 		//8KB VRAM
-		mmu.gb.ppu.VRAM[addr - 0x8000] = data
+		mmu.gb.ppu.VRAM[addr-0x8000] = data
 
-	} else if inRange(addr,0xA000,0xBFFF){
+	} else if inRange(addr, 0xA000, 0xBFFF) {
 		//8KB External RAM
-		mmu.cart.ERAM[addr - 0xA000] = data
+		mmu.cart.writeERAM(addr,data)
 
-	} else if inRange(addr,0xC000,0xDFFF) {
+	} else if inRange(addr, 0xC000, 0xDFFF) {
 		//4KB WRAM Bank 0 + 4KB WRAM Bank 1~7
-		mmu.WRAM[addr - 0xC000] = data
+		mmu.WRAM[addr-0xC000] = data
 
-	}else if inRange(addr,0xE000,0xFDFF) {
+	} else if inRange(addr, 0xE000, 0xFDFF) {
 		//ECHO RAM of C000~DDFF
-		mmu.WRAM[addr - 0xE000] = data
+		mmu.WRAM[addr-0xE000] = data
 
-	} else if inRange(addr,0xFE00,0xFE9F) { 
+	} else if inRange(addr, 0xFE00, 0xFE9F) {
 		//OAM
-		mmu.OAM[addr - 0xFE00] = data
+		mmu.OAM[addr-0xFE00] = data
 
-	} else if inRange(addr,0xFEA0,0xFEFF) {
+	} else if inRange(addr, 0xFEA0, 0xFEFF) {
 		//Not usable
 
-	} else if inRange(addr,0xFF00,0xFF7F) {
+	} else if inRange(addr, 0xFF00, 0xFF7F) {
 		switch addr {
 		case 0xFF00:
 			mmu.MMIO[0] = (data & 0xF0) | (mmu.MMIO[0] & 0x0F)
@@ -89,7 +88,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			mmu.gb.cpu.timers.TAC = data
 		//Interrupt MMIO
 		case 0xFF0F:
-			mmu.gb.cpu.IF = data 
+			mmu.gb.cpu.IF = data
 		//PPU MMIO
 		case 0xFF40:
 			mmu.gb.ppu.LCDC = data
@@ -112,14 +111,14 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			mmu.bootromEnabled = (data == 0) //Bootrom writes a non-zero value here to unmap bootrom from memory
 		default:
 			//mmu.gb.debug.logWrite(addr)
-			mmu.MMIO[addr - 0xFF00] = data
+			mmu.MMIO[addr-0xFF00] = data
 		}
 
-	} else if inRange(addr,0xFF80,0xFFFE){
+	} else if inRange(addr, 0xFF80, 0xFFFE) {
 		//HRAM
-		mmu.HRAM[addr - 0xFF80] = data
+		mmu.HRAM[addr-0xFF80] = data
 
-	} else if inRange(addr,0xFFFF,0xFFFF){
+	} else if inRange(addr, 0xFFFF, 0xFFFF) {
 		//IE Register
 		mmu.gb.cpu.IE = data
 	}
@@ -129,47 +128,45 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 func (mmu *memory) readbyte(addr uint16) uint8 {
 	readByte := uint8(0)
 
-	if inRange(addr,0x00,0xFF)  {
+	if inRange(addr, 0x00, 0xFF) {
 		if mmu.bootromEnabled {
 			readByte = mmu.bootrom[addr]
 		} else {
 			readByte = mmu.cart.readCartridge(addr)
 		}
-	} else if inRange(addr,0x100,0x3FFF){
+	} else if inRange(addr, 0x100, 0x3FFF) {
 		//16KB ROM Bank 00
 		readByte = mmu.cart.readCartridge(addr)
 
-
-	} else if inRange(addr,0x4000,0x7FFF){
+	} else if inRange(addr, 0x4000, 0x7FFF) {
 		//16KB ROM Bank 01~NN
 		//Begin the MBC handling
 		readByte = mmu.cart.readCartridge(addr)
 
-
-	} else if inRange(addr,0x8000,0x9FFF){
+	} else if inRange(addr, 0x8000, 0x9FFF) {
 		//8KB VRAM
-		readByte = mmu.gb.ppu.VRAM[addr - 0x8000]
+		readByte = mmu.gb.ppu.VRAM[addr-0x8000]
 
-	} else if inRange(addr,0xA000,0xBFFF){
+	} else if inRange(addr, 0xA000, 0xBFFF) {
 		//8KB External RAM
-		readByte = mmu.cart.ERAM[addr - 0xA000]
+		readByte = mmu.cart.readERAM(addr)
 
-	} else if inRange(addr,0xC000,0xDFFF){
+	} else if inRange(addr, 0xC000, 0xDFFF) {
 		//4KB WRAM Bank 0 + 4KB WRAM Bank 1~7
-		readByte = mmu.WRAM[addr - 0xC000]
+		readByte = mmu.WRAM[addr-0xC000]
 
-	} else if inRange(addr,0xE000,0xFDFF){
+	} else if inRange(addr, 0xE000, 0xFDFF) {
 		//ECHO RAM of C000~DDFF
-		readByte = mmu.WRAM[addr - 0xE000]
+		readByte = mmu.WRAM[addr-0xE000]
 
-	} else if inRange(addr,0xFE00,0xFE9F){
+	} else if inRange(addr, 0xFE00, 0xFE9F) {
 		//OAM
-		readByte = mmu.OAM[addr - 0xFE00]
+		readByte = mmu.OAM[addr-0xFE00]
 
-	} else if inRange(addr,0xFEA0,0xFEFF){
+	} else if inRange(addr, 0xFEA0, 0xFEFF) {
 		//Not usable
 
-	} else if inRange(addr,0xFF00,0xFF7F){
+	} else if inRange(addr, 0xFF00, 0xFF7F) {
 		switch addr {
 		//TIMERS MMIO
 		case 0xFF04:
@@ -187,7 +184,7 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		case 0xFF40:
 			readByte = mmu.gb.ppu.LCDC
 		case 0xFF41:
-			readByte = (mmu.gb.ppu.LCDSTAT & 0xFC) | uint8(mmu.gb.ppu.mode) 
+			readByte = (mmu.gb.ppu.LCDSTAT & 0xFC) | uint8(mmu.gb.ppu.mode)
 		case 0xFF42:
 			readByte = mmu.gb.ppu.SCY
 		case 0xFF43:
@@ -204,14 +201,14 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.WX
 		default:
 			//mmu.gb.debug.logRead(addr)
-			readByte = mmu.MMIO[addr - 0xFF00]
+			readByte = mmu.MMIO[addr-0xFF00]
 		}
 
-	} else if inRange(addr,0xFF80,0xFFFE){
+	} else if inRange(addr, 0xFF80, 0xFFFE) {
 		//HRAM
-		readByte = mmu.HRAM[addr - 0xFF80]
+		readByte = mmu.HRAM[addr-0xFF80]
 
-	} else if inRange(addr,0xFFFF,0xFFFF){
+	} else if inRange(addr, 0xFFFF, 0xFFFF) {
 		//IE Register
 		readByte = mmu.gb.cpu.IE
 	}

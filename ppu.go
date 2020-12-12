@@ -9,7 +9,7 @@ const (
 	Hblank = iota
 	Vblank
 	OAMSearch
-	LCDTransfer 
+	LCDTransfer
 
 	//Main tile window sizes
 	screenWidth  = 160
@@ -112,7 +112,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 		mWindowPosX = 13
 		mWindowPosY = 80
 	}
-	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN | sdl.WINDOW_ALWAYS_ON_TOP)
+	window, err := sdl.CreateWindow("Purpleboy!", mWindowPosX, mWindowPosY, screenWidth*windowScale, screenHeight*windowScale, sdl.WINDOW_SHOWN|sdl.WINDOW_ALWAYS_ON_TOP)
 	checkErr(err, "Window creation error")
 
 	//Create renderer
@@ -123,10 +123,10 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 
 }
 
-func initSDLDebugging() (*sdl.Window, *sdl.Renderer, ) {
+func initSDLDebugging() (*sdl.Window, *sdl.Renderer) {
 	//Initialises the required windows for debugging purposes
 
-	tileWindow, err := sdl.CreateWindow("Debug", 660, 80, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN | sdl.WINDOW_ALWAYS_ON_TOP)
+	tileWindow, err := sdl.CreateWindow("Debug", 660, 80, tilewindowWidth*tilewindowScale, tilewindowHeight*tilewindowScale, sdl.WINDOW_SHOWN|sdl.WINDOW_ALWAYS_ON_TOP)
 	checkErr(err, "Debug window creation error")
 
 	tileRenderer, err := sdl.CreateRenderer(tileWindow, -1, sdl.RENDERER_ACCELERATED)
@@ -146,12 +146,12 @@ func (ppu *PPU) tick() {
 
 	switch ppu.mode {
 	//Request LCDSTAT interrupts if corresponding bit set in LCDSTAT
-	case OAMSearch: 
+	case OAMSearch:
 		if ppu.dotClock == 80 {
 			ppu.dotClock = -1
 			ppu.mode = LCDTransfer
-		} else if isZero(ppu.dotClock){
-			if bitSet(ppu.LCDSTAT,5){
+		} else if isZero(ppu.dotClock) {
+			if bitSet(ppu.LCDSTAT, 5) {
 				ppu.gb.cpu.requestSTAT()
 			}
 		}
@@ -160,19 +160,19 @@ func (ppu *PPU) tick() {
 			ppu.dotClock = -1
 			ppu.mode = Hblank
 			ppu.drawScanline()
-		} 
+		}
 	case Hblank:
 		if ppu.dotClock == 204 {
 			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 144 {
-				ppu.gb.cpu.requestVblank() 
+				ppu.gb.cpu.requestVblank()
 				ppu.mode = Vblank
 			} else {
 				ppu.mode = OAMSearch
 			}
-		} else if isZero(ppu.dotClock){
-			if bitSet(ppu.LCDSTAT,3){
+		} else if isZero(ppu.dotClock) {
+			if bitSet(ppu.LCDSTAT, 3) {
 				ppu.gb.cpu.requestSTAT()
 			}
 		}
@@ -185,8 +185,8 @@ func (ppu *PPU) tick() {
 				ppu.LY = 0
 				ppu.mode = OAMSearch
 			}
-		} else if isZero(ppu.dotClock){
-			if bitSet(ppu.LCDSTAT,4){
+		} else if isZero(ppu.dotClock) {
+			if bitSet(ppu.LCDSTAT, 4) {
 				ppu.gb.cpu.requestSTAT()
 			}
 		}
@@ -220,25 +220,25 @@ func (ppu *PPU) drawScanline() {
 	}
 
 	ycoordOffset := int(ppu.LY + ppu.SCY)
-	row := ycoordOffset % 8                     //Which row of the tile is used for the line
-	tileMapOffset := (ycoordOffset / 8) * 32   //Offset for the tilemap
+	row := ycoordOffset % 8                  //Which row of the tile is used for the line
+	tileMapOffset := (ycoordOffset / 8) * 32 //Offset for the tilemap
 
 	for x := 0; x < 160; x++ {
 		xcoordOffset := x + int(ppu.SCX)
 		tile := (xcoordOffset) / 8 //Which tile we're using for 8 bits
-		col := x % 8  //Which bit from the 2 bytes are drawing //POSSIBLE PROBLEM
+		col := x % 8               //Which bit from the 2 bytes are drawing //POSSIBLE PROBLEM
 
 		tileNum := ppu.VRAM[tileMapOffset+tileMap+(tile)]
 		byte1 := uint8(0)
 		byte2 := uint8(0)
 		if tileDataStart == 0x1000 {
 			//Signed tile access
-			byte1 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2)]
-			byte2 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum))) * 16)+ uint16(row*2) + 1]
+			byte1 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum)))*16)+uint16(row*2)]
+			byte2 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum)))*16)+uint16(row*2)+1]
 		} else {
 			//Regular tile access
-			byte1 = ppu.VRAM[tileDataStart+(uint16(tileNum) * 16) + uint16(row*2)]
-			byte2 = ppu.VRAM[tileDataStart+(uint16(tileNum) * 16) + uint16(row*2) + 1]
+			byte1 = ppu.VRAM[tileDataStart+(uint16(tileNum)*16)+uint16(row*2)]
+			byte2 = ppu.VRAM[tileDataStart+(uint16(tileNum)*16)+uint16(row*2)+1]
 		}
 
 		//Get colour from palette
@@ -293,6 +293,7 @@ func (ppu *PPU) displayTileset() {
 
 	ppu.drawBuffer(ppu.tileRenderer, ppu.tileTexture, ppu.tileFramebuffer, tilewindowWidth)
 }
+
 /*
 Some self documentation just to wrap my head around these ppu concepts:
 

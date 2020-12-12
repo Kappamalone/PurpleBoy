@@ -1,9 +1,9 @@
 package main
 
 import (
-	"time"
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
+	"time"
 )
 
 const (
@@ -18,7 +18,7 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	testrom string = "roms/testroms/mbc/rom_1mb.gb"
+	testrom string = "roms/testroms/MBC/rom_1mb.gb"
 	fullrom string = "roms/gameroms/Tetris.gb"
 )
 
@@ -41,16 +41,17 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	return gb
 }
 
-func (gb *gameboy) handleDebug(){
+func (gb *gameboy) handleDebug() {
 	if isDebugging {
+		gb.debug.printConsole(gb.mmu.cart.rombankNum,"green")
 		gb.debug.updateDebugInformation()
-		ui.Render(gb.debug.cpuState, gb.debug.consoleOut,gb.debug.firedInterrupts)
+		ui.Render(gb.debug.cpuState, gb.debug.consoleOut, gb.debug.firedInterrupts)
 
 		gb.ppu.displayTileset()
 	}
 }
 
-func (gb *gameboy) handleLogging(){
+func (gb *gameboy) handleLogging() {
 	if isLogging {
 		gb.debug.logTrace()
 		//gb.debug.logValue(cpu.PC)
@@ -62,7 +63,7 @@ func main() {
 	ticker := time.NewTicker(16 * time.Millisecond)
 
 	if isLogging {
-		gb.debug.printConsole("Logging Enabled!\n","green")
+		gb.debug.printConsole("Logging Enabled!\n", "green")
 	}
 
 	//One frame
