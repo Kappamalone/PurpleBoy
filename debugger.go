@@ -49,6 +49,17 @@ func (debug *debugger) displayLogo() {
 	debug.printConsole("Written by Uzman Zawahir", "cyan")
 	debug.printConsole("\n", "cyan")
 	debug.printConsole("\n", "cyan")
+
+	//Display title
+	title := make([]string,0)
+	for i := 0; i < 16; i++ {
+		char := debug.gb.mmu.readbyte(uint16(0x134 + i))
+		if char != 0 {
+			title = append(title,fmt.Sprintf("%c",char))
+		}
+	}
+	debug.printConsole("Playing: " + strings.Join(title,"") + "\n","green")
+	debug.printConsole(fmt.Sprintf("MBC: 0x%02X\n",debug.gb.mmu.cart.mbc),"green")
 }
 
 func initDebugger(gb *gameboy, isLogging bool) *debugger {
@@ -66,7 +77,6 @@ func initDebugger(gb *gameboy, isLogging bool) *debugger {
 	if isLogging {
 		initLogging()
 	}
-
 	return debug
 }
 
@@ -81,7 +91,7 @@ func initLogging() {
 }
 
 func (debug *debugger) logTrace() {
-	log.Printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%02X %02X %02X %02X)", debug.gb.cpu.getAcc(), debug.gb.cpu.AF&0x00FF, debug.gb.cpu.r8Read[0](), debug.gb.cpu.r8Read[1](), debug.gb.cpu.r8Read[2](), debug.gb.cpu.r8Read[3](), debug.gb.cpu.r8Read[4](), debug.gb.cpu.r8Read[5](), debug.gb.cpu.SP, debug.gb.cpu.PC, debug.gb.mmu.ram[debug.gb.cpu.PC], debug.gb.mmu.ram[debug.gb.cpu.PC+1], debug.gb.mmu.ram[debug.gb.cpu.PC+2], debug.gb.mmu.ram[debug.gb.cpu.PC+3])
+	//log.Printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%02X %02X %02X %02X)", debug.gb.cpu.getAcc(), debug.gb.cpu.AF&0x00FF, debug.gb.cpu.r8Read[0](), debug.gb.cpu.r8Read[1](), debug.gb.cpu.r8Read[2](), debug.gb.cpu.r8Read[3](), debug.gb.cpu.r8Read[4](), debug.gb.cpu.r8Read[5](), debug.gb.cpu.SP, debug.gb.cpu.PC, debug.gb.mmu.ram[debug.gb.cpu.PC], debug.gb.mmu.ram[debug.gb.cpu.PC+1], debug.gb.mmu.ram[debug.gb.cpu.PC+2], debug.gb.mmu.ram[debug.gb.cpu.PC+3])
 	//log.Printf("PC: %04X",debug.gb.cpu.PC)
 }
 
@@ -109,12 +119,22 @@ func (debug *debugger) logVRAM() {
 
 //Write debug windows down here
 
-func (debug *debugger) printConsole(data string, colour string) {
+func (debug *debugger) printConsole(data interface{}, colour string) {
 	//Works through a primitive line by line basis
 	if len(debug.console) > 18 {
 		debug.console = debug.console[1:]
 	}
-	debug.console = append(debug.console, fmt.Sprintf("[%s](fg:%s)", data, colour))
+
+	switch data.(type){
+	case string:
+		debug.console = append(debug.console, fmt.Sprintf("[%s](fg:%s)", data, colour))
+	case int:
+		debug.console = append(debug.console, fmt.Sprintf("[%d](fg:%s)\n", data, colour))
+	case uint8:
+		debug.console = append(debug.console, fmt.Sprintf("[%02X](fg:%s)\n", data, colour))
+	case uint16:
+		debug.console = append(debug.console, fmt.Sprintf("[%04X](fg:%s)\n", data, colour))
+	}
 }
 
 func (debug *debugger) printInterrupt(interrupt string){

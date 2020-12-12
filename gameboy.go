@@ -2,7 +2,6 @@ package main
 
 import (
 	"time"
-
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -19,8 +18,8 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	testrom string = "roms/testroms/cpu_instrs/02-interrupts.gb"
-	fullrom string = "roms/gameroms/Dr mario.gb"
+	testrom string = "roms/testroms/mbc/rom_1mb.gb"
+	fullrom string = "roms/gameroms/Tetris.gb"
 )
 
 type gameboy struct {
@@ -72,7 +71,7 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
-			gb.cpu.tick()
+			gb.cpu.tick(i)
 			gb.ppu.tick()
 			gb.cpu.timers.tick()
 

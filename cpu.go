@@ -30,7 +30,7 @@ type gameboyCPU struct {
 //To complete a particular instruction in M-cycles
 var regularInstructionTiming = [256]int{
 	1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1,
-	0, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1,
+	1, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1,
 	2, 3, 2, 2, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 1,
 	2, 3, 2, 2, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 2, 1,
 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
@@ -147,12 +147,13 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	if skipBootrom {
 		cpu.skipBootrom()
 	}
-	cpu.gb.mmu.ram[0xFF00] = 0xFF //Temp Joypad MMIO stub
+	cpu.gb.mmu.MMIO[0] = 0xFF //Temp Joypad MMIO stub
 	return cpu
 }
 
-func (cpu *gameboyCPU) tick() {
+func (cpu *gameboyCPU) tick(cycle int) {
 	//Run one tick of the gameboy's cpu
+
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
 			cpu.gb.handleLogging() //Handle any logging if logging enabled
@@ -163,6 +164,9 @@ func (cpu *gameboyCPU) tick() {
 			cpu.PC++
 			cpu.addCycles(fetchedInstruction)
 			cpu.decodeAndExecute(fetchedInstruction)
+		}
+		if cpu.cycles == 0 {
+			panic("Error found in instruction timing!")
 		}
 		cpu.cycles--
 	} else {

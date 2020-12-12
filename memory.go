@@ -6,12 +6,19 @@ import (
 
 type memory struct {
 	gb  *gameboy
-	ram [1024 * 64]uint8
-
+	cart *cartridge
 	bootromEnabled bool //Used to map bootrom
 
 	bootrom [0x100]uint8 //DMG Bootrom
+	//CARTRIDGE: 16KB Rom bank 00 mapped
+	//CARTRIDGE: 16KB Rom bank 01~NN mapped
+	//CARTRIDGE: 8KB ram bank
+	//CARTRIDGE: 4KB WRAM !CGB ONLY
+
+	WRAM    []uint8         //WRAM
 	OAM     [0x100]uint8    //Object attribute memory aka sprite data
+	MMIO    [0x80]uint8     //Memory mapped input output
+	HRAM    [0x7F]uint8     //High ram
 }
 
 func initMemory(gb *gameboy,skipBootrom bool) *memory {
@@ -19,12 +26,18 @@ func initMemory(gb *gameboy,skipBootrom bool) *memory {
 	mmu.gb = gb
 	mmu.bootromEnabled = !skipBootrom
 
+	mmu.initWRAM()
+	mmu.cart = initCartridge(mmu)
 	if mmu.bootromEnabled {
 		mmu.loadBootrom("roms/bootrom/DMG_ROM.gb")
 	}
-	//mmu.loadFullRom(fullrom)
-	mmu.loadFullRom(testrom)
 	return mmu
+}
+
+func (mmu *memory) initWRAM() {
+	//Change this if CGB
+	//Initialises 8kb of WRAM
+	mmu.WRAM = make([]uint8,0x2000)
 }
 
 //MMU LOGIC---------------------------
@@ -33,13 +46,9 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//Implements the memory map from the pandocs
 	//TODO: make sure to return ppu mode for 0xFF41
 
-	if inRange(addr,0x0000,0x3FFF) {
+	if inRange(addr,0x0000,0x7FFF) {
 		//16KB ROM Bank 00
-		//mmu.ram[addr] = data
-
-	} else if inRange(addr,0x4000,0x7FFF) {
-		//16KB ROM Bank 01~NN
-		//mmu.ram[addr] = data
+		mmu.cart.handleRomWrites(addr,data)
 
 	} else if inRange(addr,0x8000,0x9FFF) {
 		//8KB VRAM
@@ -47,35 +56,27 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if inRange(addr,0xA000,0xBFFF){
 		//8KB External RAM
-		mmu.ram[addr] = data
+		mmu.cart.ERAM[addr - 0xA000] = data
 
-	} else if inRange(addr,0xC000,0xCFFF) {
-		//4KB WRAM Bank 0
-		mmu.ram[addr] = data
+	} else if inRange(addr,0xC000,0xDFFF) {
+		//4KB WRAM Bank 0 + 4KB WRAM Bank 1~7
+		mmu.WRAM[addr - 0xC000] = data
 
-	} else if inRange(addr,0xD000,0xDFFF) {
-		//4KB WRAM Bank 1~N
-		mmu.ram[addr] = data
-
-	} else if inRange(addr,0xE000,0xFDFF) {
+	}else if inRange(addr,0xE000,0xFDFF) {
 		//ECHO RAM of C000~DDFF
-		mmu.ram[addr-0x2000] = data
+		mmu.WRAM[addr - 0xE000] = data
 
 	} else if inRange(addr,0xFE00,0xFE9F) { 
 		//OAM
-		mmu.OAM[addr-0xFE00] = data
+		mmu.OAM[addr - 0xFE00] = data
 
 	} else if inRange(addr,0xFEA0,0xFEFF) {
 		//Not usable
-		/* I'd log this "erronous" behaviour, however it seems that multiple games do this
-		if isDebugging {
-			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
-		}*/
 
 	} else if inRange(addr,0xFF00,0xFF7F) {
 		switch addr {
 		case 0xFF00:
-			mmu.ram[addr] = (data & 0xF0) | (mmu.ram[addr] & 0x0F)
+			mmu.MMIO[0] = (data & 0xF0) | (mmu.MMIO[0] & 0x0F)
 		//TIMERS MMIO
 		case 0xFF04:
 			mmu.gb.cpu.timers.DIV = 0 //Writing any value to DIV resets it to 0
@@ -111,12 +112,12 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			mmu.bootromEnabled = (data == 0) //Bootrom writes a non-zero value here to unmap bootrom from memory
 		default:
 			//mmu.gb.debug.logWrite(addr)
-			mmu.ram[addr] = data
+			mmu.MMIO[addr - 0xFF00] = data
 		}
 
 	} else if inRange(addr,0xFF80,0xFFFE){
 		//HRAM
-		mmu.ram[addr] = data
+		mmu.HRAM[addr - 0xFF80] = data
 
 	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
@@ -132,46 +133,41 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		if mmu.bootromEnabled {
 			readByte = mmu.bootrom[addr]
 		} else {
-			readByte = mmu.ram[addr]
+			readByte = mmu.cart.readCartridge(addr)
 		}
 	} else if inRange(addr,0x100,0x3FFF){
 		//16KB ROM Bank 00
-		readByte = mmu.ram[addr]
+		readByte = mmu.cart.readCartridge(addr)
+
 
 	} else if inRange(addr,0x4000,0x7FFF){
 		//16KB ROM Bank 01~NN
-		readByte = mmu.ram[addr]
+		//Begin the MBC handling
+		readByte = mmu.cart.readCartridge(addr)
+
 
 	} else if inRange(addr,0x8000,0x9FFF){
 		//8KB VRAM
-		//readByte = mmu.gb.ppu.readVRAM(addr - 0x8000)
 		readByte = mmu.gb.ppu.VRAM[addr - 0x8000]
 
 	} else if inRange(addr,0xA000,0xBFFF){
 		//8KB External RAM
-		readByte = mmu.ram[addr]
+		readByte = mmu.cart.ERAM[addr - 0xA000]
 
-	} else if inRange(addr,0xC000,0xCFFF){
-		//4KB WRAM Bank 0
-		readByte = mmu.ram[addr]
-
-	} else if inRange(addr,0xD000,0xDFFF){
-		//4KB WRAM Bank 1~N
-		readByte = mmu.ram[addr]
+	} else if inRange(addr,0xC000,0xDFFF){
+		//4KB WRAM Bank 0 + 4KB WRAM Bank 1~7
+		readByte = mmu.WRAM[addr - 0xC000]
 
 	} else if inRange(addr,0xE000,0xFDFF){
 		//ECHO RAM of C000~DDFF
-		readByte = mmu.ram[addr-0x2000]
+		readByte = mmu.WRAM[addr - 0xE000]
 
 	} else if inRange(addr,0xFE00,0xFE9F){
 		//OAM
-		readByte = mmu.OAM[addr-0xFE00]
+		readByte = mmu.OAM[addr - 0xFE00]
 
 	} else if inRange(addr,0xFEA0,0xFEFF){
 		//Not usable
-		if isDebugging {
-			mmu.gb.debug.printConsole("ACCESSING ILLEGAL MEMORY\n", "cyan")
-		}
 
 	} else if inRange(addr,0xFF00,0xFF7F){
 		switch addr {
@@ -208,12 +204,12 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.WX
 		default:
 			//mmu.gb.debug.logRead(addr)
-			readByte = mmu.ram[addr]
+			readByte = mmu.MMIO[addr - 0xFF00]
 		}
 
 	} else if inRange(addr,0xFF80,0xFFFE){
 		//HRAM
-		readByte = mmu.ram[addr]
+		readByte = mmu.HRAM[addr - 0xFF80]
 
 	} else if inRange(addr,0xFFFF,0xFFFF){
 		//IE Register
@@ -247,13 +243,4 @@ func (mmu *memory) loadBootrom(path string) {
 		mmu.bootrom[i] = file[i]
 	}
 
-}
-
-func (mmu *memory) loadFullRom(path string) {
-	file, err := ioutil.ReadFile(path)
-	checkErr(err, "Could not find rom specified!")
-
-	for i := 0; i < len(file); i++ {
-		mmu.ram[i] = file[i]
-	}
 }
