@@ -152,10 +152,8 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 
 func (cpu *gameboyCPU) tick(cycle int) {
 	//Run one tick of the gameboy's cpu
-
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
-			cpu.gb.handleLogging() //Handle any logging if logging enabled
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
 
 			//Fetch, decode and execute

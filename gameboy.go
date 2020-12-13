@@ -18,8 +18,9 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	testrom string = "roms/testroms/MBC/rom_1mb.gb"
-	fullrom string = "roms/gameroms/Tetris.gb"
+	testrom string = "roms/testroms/MBC/bits_ramg.gb"
+	//fullrom string = "roms/gameroms/LoZ Link's Awakening.gb"
+	fullrom string = "roms/gameroms/Super Mario Land.gb"
 )
 
 type gameboy struct {
@@ -43,7 +44,6 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 
 func (gb *gameboy) handleDebug() {
 	if isDebugging {
-		gb.debug.printConsole(gb.mmu.cart.rombankNum,"green")
 		gb.debug.updateDebugInformation()
 		ui.Render(gb.debug.cpuState, gb.debug.consoleOut, gb.debug.firedInterrupts)
 
@@ -53,8 +53,8 @@ func (gb *gameboy) handleDebug() {
 
 func (gb *gameboy) handleLogging() {
 	if isLogging {
-		gb.debug.logTrace()
-		//gb.debug.logValue(cpu.PC)
+		//gb.debug.logTrace()
+		//gb.debug.logValue(gb.mmu.cart.rombankNum)
 	}
 }
 

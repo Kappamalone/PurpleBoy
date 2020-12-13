@@ -55,7 +55,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 
 	} else if inRange(addr, 0xA000, 0xBFFF) {
 		//8KB External RAM
-		mmu.cart.writeERAM(addr,data)
+		mmu.cart.writeERAM(addr, data)
 
 	} else if inRange(addr, 0xC000, 0xDFFF) {
 		//4KB WRAM Bank 0 + 4KB WRAM Bank 1~7

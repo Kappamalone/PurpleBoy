@@ -200,7 +200,14 @@ func (ppu *PPU) tick() {
 
 //Compare LY and LYC every tick of the PPU
 func (ppu *PPU) compareLYC() {
-
+	if ppu.LYC == ppu.LY {
+		ppu.LCDSTAT |= 0x04
+	} else {
+		ppu.LCDSTAT &^= 0x04
+	}
+	if bitSet(ppu.LCDSTAT, 6) && bitSet(ppu.LCDSTAT, 2) {
+		ppu.gb.cpu.requestSTAT()
+	}
 }
 
 func (ppu *PPU) drawScanline() {
@@ -224,21 +231,24 @@ func (ppu *PPU) drawScanline() {
 	tileMapOffset := (ycoordOffset / 8) * 32 //Offset for the tilemap
 
 	for x := 0; x < 160; x++ {
-		xcoordOffset := x + int(ppu.SCX)
-		tile := (xcoordOffset) / 8 //Which tile we're using for 8 bits
-		col := x % 8               //Which bit from the 2 bytes are drawing //POSSIBLE PROBLEM
+		//Horizontal scrolling broken :(
+		xcoordOffset := int(uint8(x) + ppu.SCX)
+		tile := xcoordOffset / 8 //Which tile we're using from tile map
+		col := xcoordOffset % 8  //Which bit from the 2 bytes are drawing
 
-		tileNum := ppu.VRAM[tileMapOffset+tileMap+(tile)]
+		tileNum := ppu.VRAM[tileMapOffset+tileMap+tile]
 		byte1 := uint8(0)
 		byte2 := uint8(0)
 		if tileDataStart == 0x1000 {
 			//Signed tile access
-			byte1 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum)))*16)+uint16(row*2)]
-			byte2 = ppu.VRAM[tileDataStart+(uint16(int16(int8(tileNum)))*16)+uint16(row*2)+1]
+			target := (tileDataStart + (uint16(int16(int8(tileNum))) * 16) + uint16(row*2))
+			byte1 = ppu.VRAM[target]
+			byte2 = ppu.VRAM[target+1]
 		} else {
 			//Regular tile access
-			byte1 = ppu.VRAM[tileDataStart+(uint16(tileNum)*16)+uint16(row*2)]
-			byte2 = ppu.VRAM[tileDataStart+(uint16(tileNum)*16)+uint16(row*2)+1]
+			target := (tileDataStart + (uint16(tileNum) * 16) + uint16(row*2))
+			byte1 = ppu.VRAM[target]
+			byte2 = ppu.VRAM[target+1]
 		}
 
 		//Get colour from palette
