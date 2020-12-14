@@ -33,8 +33,6 @@ func initJoypad(gb *gameboy) *joypad {
 	
 	if sdl.NumJoysticks() > 0 {
 		joypad.gb.debug.printConsole("Controller Connected\n","green")
-		sdl.JoystickEventState(sdl.ENABLE)
-		sdl.JoystickOpen(0)
 	}
 	return joypad
 }
@@ -128,6 +126,7 @@ func (joypad *joypad) SDLHandleKeyboard(e *sdl.KeyboardEvent){
 
 func (joypad *joypad) SDLHandleController(e *sdl.JoyButtonEvent){
 	if e.Type == sdl.JOYBUTTONDOWN {
+		joypad.gb.cpu.requestJoypad() //TODO: Don't do this
 		switch e.Button {
 		//Buttons
 		case 9: //Start:  Enter

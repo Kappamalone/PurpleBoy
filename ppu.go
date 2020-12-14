@@ -200,7 +200,6 @@ func (ppu *PPU) tick() {
 
 //Compare LY and LYC every tick of the PPU
 func (ppu *PPU) compareLYC() {
-	//Buggy!
 
 }
 

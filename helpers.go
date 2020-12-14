@@ -73,14 +73,25 @@ func boolToInt(flag bool) uint8 {
 	}
 }
 
-func bitSet(data uint8, place uint8) bool {
+func bitSet(data interface{}, place uint8) bool {
 	//Checks if bit is set starting from the rhs
 	//I really wish I wrote this function earlier...
-	if (data>>place)&0x01 == 0x01 {
-		return true
-	} else {
-		return false
+	var isSet bool
+	switch d := data.(type) {
+	case uint8:
+		if (d>>place)&0x01 == 0x01 {
+			isSet = true
+		} else {
+			isSet = false
+		}
+	case uint16:
+		if (d>>place)&0x01 == 0x01 {
+			isSet = true
+		} else {
+			isSet = false
+		}
 	}
+	return isSet
 }
 
 func setBit(data *uint8, place uint8){

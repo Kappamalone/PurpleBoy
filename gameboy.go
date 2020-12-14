@@ -22,7 +22,7 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "Tetris"
+	title   string = "FF I"
 	testrom string = "roms/testroms/MBC/rom_8mb.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
