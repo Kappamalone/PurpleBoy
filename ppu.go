@@ -200,14 +200,8 @@ func (ppu *PPU) tick() {
 
 //Compare LY and LYC every tick of the PPU
 func (ppu *PPU) compareLYC() {
-	if ppu.LYC == ppu.LY {
-		ppu.LCDSTAT |= 0x04
-	} else {
-		ppu.LCDSTAT &^= 0x04
-	}
-	if bitSet(ppu.LCDSTAT, 6) && bitSet(ppu.LCDSTAT, 2) {
-		ppu.gb.cpu.requestSTAT()
-	}
+	//Buggy!
+
 }
 
 func (ppu *PPU) drawScanline() {

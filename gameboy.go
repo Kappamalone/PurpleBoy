@@ -3,6 +3,7 @@ package main
 import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
+	"fmt"
 	"time"
 	"flag"
 )
@@ -15,12 +16,15 @@ const (
 )
 
 var (
+	//rom_8mb fails for some unholy reason
+	
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
 
-	testrom string = "roms/testroms/MBC/rom_1MB.gb"
-	gamerom string = "roms/gameroms/LoZ Link's Awakening.gb"
+	title   string = "Pokemon Red"
+	testrom string = "roms/testroms/MBC/rom_8mb.gb"
+	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
 )
 
@@ -60,7 +64,7 @@ func (gb *gameboy) handleLogging() {
 }
 
 func main() {
-	flag.BoolVar(&useTestRom,"t",false,"Used for picking game or testrom")
+	flag.BoolVar(&useTestRom,"t",false,"Used for picking gamerom or testrom")
 	flag.Parse()
 
 	gb := initGameboy(skipBootrom, isDebugging)

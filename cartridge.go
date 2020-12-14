@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	mbc1BitmaskMap = [6]uint8{0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F} //Get bitmasks for different rom sizes on MBC1
+	mbcBitmaskMap = [7]uint8{0x00,0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F} //Get bitmasks for different rom sizes on MBC1
 	RAMSizes       = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
 )
 
@@ -14,8 +14,8 @@ type cartridge struct {
 
 	ROM         []uint8 //Contains the whole ROM
 	MBC         uint8   //Which MBC the rom uses
-	rombankNum  uint16  //Which rombank is currently in use
-	special2Bit uint16  //Multi purpose 2 bits used as RAM bank num or Upper bits of rom bank num
+	rombankNum  int  //Which rombank is currently in use
+	special2Bit int  //Multi purpose 2 bits used as RAM bank num or Upper bits of rom bank num
 	bankMode    uint8   //Which rom banking mode is in use
 
 	ROMSize  uint8 //Rom size specified for cartridge
@@ -35,7 +35,6 @@ func initCartridge(memory *memory) *cartridge {
 	} else {
 		cart.loadRom(gamerom)
 	}
-	//cart.loadRom(testrom)
 	cart.initERAM()
 
 	return cart
@@ -80,25 +79,29 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 		//MBC1
 		//Roms bigger than romsize 5 are brokey :(
 		if inRange(addr, 0x0000, 0x3FFF) {
-			if cart.bankMode == 0x00 || cart.ROMSize <= 0x5 { //Use regular banking if romsize is 512KBytes or lower
+			if cart.bankMode == 0x00 || cart.ROMSize <= 0x4 { //Use regular banking if romsize is 512KBytes or lower
 				readByte = cart.ROM[addr]
 			} else {
 				//The 2 special bits can map to 0x00,0x20,0x40,0x60 banks
-				readByte = cart.ROM[(uint32(cart.special2Bit)*0x20*0x4000)+uint32(addr)]
+				readByte = cart.ROM[(cart.special2Bit*0x20*0x4000)+int(addr)]
 			}
 		} else {
-			//rom bank time!
-			if cart.bankMode == 0x00 || cart.ROMSize <= 0x5 { //Use regular banking if rom is <= 512 KBytes or lower
+			if cart.bankMode == 0x00 || cart.ROMSize <= 0x4 { //Use regular banking if rom is <= 512 KBytes or lower
 				//Simple Rom banking
-				cart.memory.gb.debug.printConsole("Ha found you!\n","red")
-				readByte = cart.ROM[(cart.rombankNum*0x4000)+(addr-0x4000)]
+				readByte = cart.ROM[(cart.rombankNum*0x4000)+(int(addr)-0x4000)]
 			} else {
 				//Advanced Rom banking
-				readByte = cart.ROM[(cart.special2Bit<<5|cart.rombankNum)*0x4000+(addr-0x4000)]
+				readByte = cart.ROM[(cart.special2Bit<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
 			}
 		}
 	} else if cart.MBC == 3 {
 		//MBC3
+		if inRange(addr, 0x0000, 0x3FFF) {
+			readByte = cart.ROM[addr]
+		} else {
+			//Simple Rom banking
+			readByte = cart.ROM[(cart.rombankNum*0x4000)+(int(addr)-0x4000)]
+		}
 	}
 
 	return readByte
@@ -107,29 +110,33 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 func (cart *cartridge) handleRomWrites(addr uint16, data uint8) {
 	if inRange(addr, 0x0000, 0x1FFF) {
 		//ERAM enable/disable
-		if (data & 0xF) == 0xA {
-			cart.ERAMEnable = true
-		} else {
-			cart.ERAMEnable = false
-		}
+		cart.ERAMEnable = (data & 0xF) == 0xA
 	} else if inRange(addr, 0x2000, 0x3FFF) {
 		//ROM Bank select
 		if cart.MBC == 1 {
-			if (data & 0x1F) == 0 {
+			if data & 0x1F == 0 {
 				//0x00,0x20,0x40,0x60 Get remapped to one rom bank higher
 				//Which means any byte where the lower 5 bits are 0 get mapped to one a rombank one higher
 				data++
 			}
+			data &= mbcBitmaskMap[cart.ROMSize]
+		} else if cart.MBC == 3 {
+			//0x20,0x40 and 0x60 aren't affected in MBC3
+			if data == 0 {
+				data = 1
+			}
+			data &= mbcBitmaskMap[cart.ROMSize]
 		}
-
-		cart.rombankNum = uint16(data & mbc1BitmaskMap[cart.ROMSize])
+		cart.rombankNum = int(data)
 
 	} else if inRange(addr, 0x4000, 0x5FFF) {
-		cart.special2Bit = uint16(data & 0x3)
+		cart.special2Bit = int(data) & 0x3
 
 	} else if inRange(addr, 0x6000, 0x7FFF) {
 		//Banking mode select
-		cart.bankMode = data & 0x1
+		if cart.MBC == 1 {
+			cart.bankMode = data & 0x1
+		}
 	}
 }
 
@@ -143,7 +150,7 @@ func (cart *cartridge) readERAM(addr uint16) uint8 {
 			
 		} else {
 			//ERAM Banks 0-4
-			readByte = cart.ERAM[(cart.special2Bit*0x2000)+(addr-0xA000)]
+			readByte = cart.ERAM[(cart.special2Bit*0x2000)+(int(addr)-0xA000)]
 		}
 	}
 
@@ -160,7 +167,7 @@ func (cart *cartridge) writeERAM(addr uint16, data uint8) {
 			cart.ERAM[addr-0xA000] = data
 		} else {
 			//ERAM Banks 0-4
-			cart.ERAM[(cart.special2Bit*0x2000)+(addr-0xA000)] = data
+			cart.ERAM[(cart.special2Bit*0x2000)+(int(addr)-0xA000)] = data
 		}
 	}
 }

@@ -73,7 +73,7 @@ func (cpu *gameboyCPU) skipBootrom() {
 	cpu.DE = 0x00D8
 	cpu.HL = 0x014D
 	cpu.gb.ppu.LCDC = 0x91
-	cpu.gb.mmu.writebyte(0xFF47, 0xFC) //Palette
+	cpu.gb.ppu.palette = 0xFC
 }
 
 func (cpu *gameboyCPU) initMaps() {
