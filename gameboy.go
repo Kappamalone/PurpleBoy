@@ -19,7 +19,7 @@ var (
 	//rom_8mb fails for some unholy reason
 
 	skipBootrom bool = true
-	isDebugging bool = false
+	isDebugging bool = true
 	isLogging   bool = false
 
 	title   string = "Tetris"
@@ -41,10 +41,10 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb, skipBootrom)
 	gb.cpu = initCPU(gb, skipBootrom)
-	gb.joypad = initJoypad(gb)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)
 	}
+	gb.joypad = initJoypad(gb)
 
 	return gb
 }

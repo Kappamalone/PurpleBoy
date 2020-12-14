@@ -104,7 +104,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	mWindowPosY := int32(sdl.WINDOWPOS_UNDEFINED)
 
 	//Initialise SDL
-	checkErr(sdl.Init(sdl.INIT_VIDEO), "SDL initialisation error")
+	checkErr(sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK), "SDL initialisation error")
 
 	//Create window
 	if isDebugging {
