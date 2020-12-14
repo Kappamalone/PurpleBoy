@@ -46,8 +46,7 @@ func (debug *debugger) displayLogo() {
 		debug.printConsole(line+"\n", "magenta")
 	}
 	debug.printConsole("\n", "cyan")
-	debug.printConsole("Written by Uzman Zawahir", "cyan")
-	debug.printConsole("\n", "cyan")
+	debug.printConsole("Written by Uzman Zawahir\n", "cyan")
 	debug.printConsole("\n", "cyan")
 
 	//Display title
@@ -124,7 +123,7 @@ func (debug *debugger) logVRAM() {
 
 func (debug *debugger) printConsole(data interface{}, colour string) {
 	//Works through a primitive line by line basis
-	if len(debug.console) > 18 {
+	if len(debug.console) > 16 {
 		debug.console = debug.console[1:]
 	}
 

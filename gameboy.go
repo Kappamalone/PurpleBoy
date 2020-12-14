@@ -17,22 +17,23 @@ const (
 
 var (
 	//rom_8mb fails for some unholy reason
-	
+
 	skipBootrom bool = true
-	isDebugging bool = true
+	isDebugging bool = false
 	isLogging   bool = false
 
-	title   string = "Pokemon Red"
+	title   string = "Tetris"
 	testrom string = "roms/testroms/MBC/rom_8mb.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
 )
 
 type gameboy struct {
-	cpu   *gameboyCPU
-	ppu   *PPU
-	mmu   *memory
-	debug *debugger
+	cpu    *gameboyCPU
+	ppu    *PPU
+	mmu    *memory
+	joypad *joypad
+	debug  *debugger
 }
 
 func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
@@ -40,6 +41,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb, skipBootrom)
 	gb.cpu = initCPU(gb, skipBootrom)
+	gb.joypad = initJoypad(gb)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)
 	}
@@ -85,7 +87,7 @@ func main() {
 			gb.cpu.timers.tick()
 
 		}
-		if handleInput() {
+		if gb.joypad.handleInput() {
 			ticker.Stop() //Stop ticker to exit program
 			break
 		}

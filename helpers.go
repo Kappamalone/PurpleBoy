@@ -83,6 +83,15 @@ func bitSet(data uint8, place uint8) bool {
 	}
 }
 
+func setBit(data *uint8, place uint8){
+	*data |= (1 << place)
+}
+
+func clearBit(data *uint8, place uint8){
+	*data &^= (1 << place)
+}
+
+
 func inRange(value uint16, lowerBound uint16, upperBound uint16) bool {
 	//Used by MMU to have cleaner looking code
 	return value >= lowerBound && value <= upperBound

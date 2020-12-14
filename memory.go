@@ -75,7 +75,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 	} else if inRange(addr, 0xFF00, 0xFF7F) {
 		switch addr {
 		case 0xFF00:
-			mmu.MMIO[0] = (data & 0xF0) | (mmu.MMIO[0] & 0x0F)
+			mmu.gb.joypad.writeJoypad(data)
 		//TIMERS MMIO
 		case 0xFF04:
 			mmu.gb.cpu.timers.DIV = 0 //Writing any value to DIV resets it to 0
@@ -169,6 +169,8 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 	} else if inRange(addr, 0xFF00, 0xFF7F) {
 		switch addr {
 		//TIMERS MMIO
+		case 0xFF00:
+			readByte = mmu.gb.joypad.readJoypad()
 		case 0xFF04:
 			readByte = mmu.gb.cpu.timers.DIV
 		case 0xFF05:
