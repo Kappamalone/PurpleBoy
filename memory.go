@@ -13,7 +13,7 @@ type memory struct {
 	//CARTRIDGE: 16KB Rom bank 00 mapped
 	//CARTRIDGE: 16KB Rom bank 01~NN mapped
 	//CARTRIDGE: 8KB ram bank
-	//CARTRIDGE: 4KB WRAM !CGB ONLY
+	//CARTRIDGE: 4KB WRAM !CGB only bankswitching
 
 	WRAM []uint8      //WRAM
 	OAM  [0x100]uint8 //Object attribute memory aka sprite data

@@ -4,6 +4,7 @@ import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
 	"time"
+	"flag"
 )
 
 const (
@@ -18,9 +19,9 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	testrom string = "roms/testroms/MBC/bits_ramg.gb"
-	//fullrom string = "roms/gameroms/LoZ Link's Awakening.gb"
-	fullrom string = "roms/gameroms/Super Mario Land.gb"
+	testrom string = "roms/testroms/MBC/rom_1MB.gb"
+	gamerom string = "roms/gameroms/LoZ Link's Awakening.gb"
+	useTestRom bool = false
 )
 
 type gameboy struct {
@@ -59,6 +60,9 @@ func (gb *gameboy) handleLogging() {
 }
 
 func main() {
+	flag.BoolVar(&useTestRom,"t",false,"Used for picking game or testrom")
+	flag.Parse()
+
 	gb := initGameboy(skipBootrom, isDebugging)
 	ticker := time.NewTicker(16 * time.Millisecond)
 

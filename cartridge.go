@@ -29,10 +29,14 @@ func initCartridge(memory *memory) *cartridge {
 	cart := new(cartridge)
 	cart.memory = memory
 	cart.rombankNum = 1
-	cart.initERAM()
 
-	//cart.loadRom(fullrom)
-	cart.loadRom(testrom)
+	if useTestRom {
+		cart.loadRom(testrom)
+	} else {
+		cart.loadRom(gamerom)
+	}
+	//cart.loadRom(testrom)
+	cart.initERAM()
 
 	return cart
 }
@@ -49,7 +53,7 @@ func getMBCNum(hexvalue uint8) uint8 {
 }
 
 func (cart *cartridge) initERAM() {
-	//Depending on MBC initialise properly sized ERAM
+	//Depending on RAM num initialise properly sized ERAM
 	cart.ERAM = make([]uint8, RAMSizes[cart.ERAMSize])
 }
 
@@ -74,8 +78,9 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 		readByte = cart.ROM[addr]
 	} else if cart.MBC == 1 {
 		//MBC1
+		//Roms bigger than romsize 5 are brokey :(
 		if inRange(addr, 0x0000, 0x3FFF) {
-			if cart.bankMode == 0x00 || len(cart.ROM) <= 0x10000 { //Use regular banking if rom is <= 512 kibibits
+			if cart.bankMode == 0x00 || cart.ROMSize <= 0x5 { //Use regular banking if romsize is 512KBytes or lower
 				readByte = cart.ROM[addr]
 			} else {
 				//The 2 special bits can map to 0x00,0x20,0x40,0x60 banks
@@ -83,8 +88,9 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 			}
 		} else {
 			//rom bank time!
-			if cart.bankMode == 0x00 || len(cart.ROM) <= 0x10000 { //Use regular banking if rom is <= 512 kibibits
+			if cart.bankMode == 0x00 || cart.ROMSize <= 0x5 { //Use regular banking if rom is <= 512 KBytes or lower
 				//Simple Rom banking
+				cart.memory.gb.debug.printConsole("Ha found you!\n","red")
 				readByte = cart.ROM[(cart.rombankNum*0x4000)+(addr-0x4000)]
 			} else {
 				//Advanced Rom banking
@@ -101,7 +107,7 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 func (cart *cartridge) handleRomWrites(addr uint16, data uint8) {
 	if inRange(addr, 0x0000, 0x1FFF) {
 		//ERAM enable/disable
-		if addr & 0xF == 0xA {
+		if (data & 0xF) == 0xA {
 			cart.ERAMEnable = true
 		} else {
 			cart.ERAMEnable = false
@@ -128,17 +134,19 @@ func (cart *cartridge) handleRomWrites(addr uint16, data uint8) {
 }
 
 func (cart *cartridge) readERAM(addr uint16) uint8 {
-	readByte := uint8(0)
+	readByte := uint8(0xFF)
 	if cart.ERAMEnable && cart.ERAMSize != 0 {
 		//ERAM sizes 8kb and lower don't have any banking
-		if cart.bankMode == 0 || len(cart.ERAM) <= 0x2000 {
+		if cart.bankMode == 0 || cart.ERAMSize == 0x02 {
 			//ERAM Bank 0
 			readByte = cart.ERAM[addr-0xA000]
+			
 		} else {
 			//ERAM Banks 0-4
 			readByte = cart.ERAM[(cart.special2Bit*0x2000)+(addr-0xA000)]
 		}
 	}
+
 
 	return readByte
 }
@@ -146,7 +154,7 @@ func (cart *cartridge) readERAM(addr uint16) uint8 {
 func (cart *cartridge) writeERAM(addr uint16, data uint8) {
 	if cart.ERAMEnable && cart.ERAMSize != 0 {
 		//ERAM sizes 8kb and lower don't have any banking
-		if cart.bankMode == 0 || len(cart.ERAM) <= 0x2000 {
+		if cart.bankMode == 0 || cart.ERAMSize == 0x02 {
 			//ERAM Bank 0
 			//TODO: Use modulus to account for 2kb rom banks
 			cart.ERAM[addr-0xA000] = data
