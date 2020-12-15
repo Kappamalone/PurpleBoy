@@ -146,11 +146,11 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	if skipBootrom {
 		cpu.skipBootrom()
 	}
-	//cpu.gb.mmu.MMIO[0] = 0xFF //Temp Joypad MMIO stub
+
 	return cpu
 }
 
-func (cpu *gameboyCPU) tick(cycle int) {
+func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
 	if !cpu.HALT {
 		if cpu.cycles == 0 {

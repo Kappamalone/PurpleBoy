@@ -20,7 +20,7 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "Super Mario Land"
+	title   string = "LoZ Link's Awakening"
 	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
@@ -64,6 +64,7 @@ func (gb *gameboy) handleLogging() {
 }
 
 func main() {
+	//Command line flags
 	flag.BoolVar(&useTestRom,"t",false,"Used for picking gamerom or testrom")
 	flag.Parse()
 
@@ -80,7 +81,7 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
-			gb.cpu.tick(i)
+			gb.cpu.tick()
 			gb.ppu.tick()
 			gb.cpu.timers.tick()
 

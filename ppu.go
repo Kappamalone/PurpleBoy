@@ -171,6 +171,7 @@ func (ppu *PPU) tick() {
 			} else {
 				ppu.mode = OAMSearch
 			}
+			ppu.compareLYC()
 		} else if isZero(ppu.dotClock) {
 			if bitSet(ppu.LCDSTAT, 3) {
 				ppu.gb.cpu.requestSTAT()
@@ -185,14 +186,13 @@ func (ppu *PPU) tick() {
 				ppu.LY = 0
 				ppu.mode = OAMSearch
 			}
+			ppu.compareLYC()
 		} else if isZero(ppu.dotClock) {
 			if bitSet(ppu.LCDSTAT, 4) {
 				ppu.gb.cpu.requestSTAT()
 			}
 		}
 	}
-
-	ppu.compareLYC()
 	ppu.dotClock++
 }
 
@@ -200,26 +200,38 @@ func (ppu *PPU) tick() {
 func (ppu *PPU) compareLYC() {
 	//Set bit 2 depending on lyc == ly
 	if ppu.LYC == ppu.LY {
-		ppu.LYC |= 0x4
+		ppu.LCDSTAT |= 0x04
 
 		//If LYC=LY interrupt enable, request
-		if bitSet(ppu.LYC,6){
+		if bitSet(ppu.LCDSTAT,6){
 			ppu.gb.cpu.requestSTAT()
 		}
 	} else {
-		ppu.LYC &^= 0x4
+		ppu.LCDSTAT &^= 0x04
 	}
 }
 
 func (ppu *PPU) drawScanline() {
 	//Draw a scanline here
-	//Since I'm getting absolutely punked by this part of the project,
-	//I shall approach it slowly and cautiously, and implement things one
-	//bit at a time
+	if !bitSet(ppu.LCDC,0){ //Basically background enable master flag
+		return
+	}
+	usingWindow := false
+	windowX := ppu.WX - 7
 
-	tileMap := 0x1800
-	if bitSet(ppu.LCDC, 3) {
-		tileMap = 0x1C00
+	tileMap := 0x1800 //Both BG and window use 0x1800 as the default map
+	if bitSet(ppu.LCDC,5) && ppu.WY <= ppu.LY{
+		//Window tile map select
+		//For future reference: We check the line to see if it has entered the window region, since ppu.WY is usually fixed (i think)
+		usingWindow = true
+		if bitSet(ppu.LCDC, 6) {
+			tileMap = 0x1C00
+		}
+	} else {
+		//BG tilemap select
+		if bitSet(ppu.LCDC,3) {
+			tileMap = 0x1C00
+		}
 	}
 
 	tileDataStart := uint16(0x1000) //Signed!
@@ -227,13 +239,24 @@ func (ppu *PPU) drawScanline() {
 		tileDataStart = 0x0000
 	}
 
-	ycoordOffset := int(ppu.LY + ppu.SCY)
-	row := ycoordOffset % 8                  //Which row of the tile is used for the line
-	tileMapOffset := (ycoordOffset / 8) * 32 //Offset for the tilemap
-
 	for x := 0; x < 160; x++ {
-		//Horizontal scrolling broken :(
-		xcoordOffset := int(uint8(x) + ppu.SCX)
+		xcoordOffset := int(0)
+		ycoordOffset := int(0)
+		if usingWindow && windowX <= uint8(x){
+			//Window
+			ycoordOffset = int(ppu.LY - ppu.WY)
+			xcoordOffset = int(uint8(x) - windowX)
+		}  else {
+			//BG
+			xcoordOffset = int(uint8(x) + ppu.SCX)
+			ycoordOffset = int(ppu.LY + ppu.SCY)
+		}
+
+		
+		row := ycoordOffset % 8                  //Which row of the tile is used for the line
+		tileMapOffset := (ycoordOffset / 8) * 32 //Offset for the tilemap
+
+		
 		tile := xcoordOffset / 8 //Which tile we're using from tile map
 		col := xcoordOffset % 8  //Which bit from the 2 bytes are drawing
 
@@ -256,8 +279,8 @@ func (ppu *PPU) drawScanline() {
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
 		colour := colours[(ppu.palette>>(colourIndex*2))&0x3]
 
-		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
 
+		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
 	}
 }
 
