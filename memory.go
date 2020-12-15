@@ -47,7 +47,7 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//TODO: make sure to return ppu mode for 0xFF41
 	if inRange(addr, 0x0000, 0x7FFF) {
 		//16KB ROM Bank 00
-		mmu.cart.handleRomWrites(addr, data)
+		mmu.cart.writeCartridge(addr, data)
 
 	} else if inRange(addr, 0x8000, 0x9FFF) {
 		//8KB VRAM

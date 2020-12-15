@@ -190,17 +190,25 @@ func (ppu *PPU) tick() {
 				ppu.gb.cpu.requestSTAT()
 			}
 		}
-
 	}
 
-	//Compare LYC and LY here every tick
 	ppu.compareLYC()
 	ppu.dotClock++
 }
 
 //Compare LY and LYC every tick of the PPU
 func (ppu *PPU) compareLYC() {
+	//Set bit 2 depending on lyc == ly
+	if ppu.LYC == ppu.LY {
+		ppu.LYC |= 0x4
 
+		//If LYC=LY interrupt enable, request
+		if bitSet(ppu.LYC,6){
+			ppu.gb.cpu.requestSTAT()
+		}
+	} else {
+		ppu.LYC &^= 0x4
+	}
 }
 
 func (ppu *PPU) drawScanline() {

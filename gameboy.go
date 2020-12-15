@@ -16,14 +16,12 @@ const (
 )
 
 var (
-	//rom_8mb fails for some unholy reason
-
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "FF I"
-	testrom string = "roms/testroms/MBC/rom_8mb.gb"
+	title   string = "Super Mario Land"
+	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
 )
