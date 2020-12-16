@@ -16,11 +16,12 @@ const (
 )
 
 var (
+	//TODO: Check if FF Adventure's scrolling text has correct bgp values
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "LoZ Link's Awakening"
+	title   string = "Pokemon Red"
 	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false

@@ -217,7 +217,12 @@ func (ppu *PPU) drawScanline() {
 		return
 	}
 	usingWindow := false
-	windowX := ppu.WX - 7
+	windowX := uint8(0)
+	if ppu.WX <= 7{ //Pesky underflows!
+		windowX = 0
+	} else {
+		windowX = ppu.WX - 7
+	}
 
 	tileMap := 0x1800 //Both BG and window use 0x1800 as the default map
 	if bitSet(ppu.LCDC,5) && ppu.WY <= ppu.LY{
@@ -233,7 +238,6 @@ func (ppu *PPU) drawScanline() {
 			tileMap = 0x1C00
 		}
 	}
-
 	tileDataStart := uint16(0x1000) //Signed!
 	if bitSet(ppu.LCDC, 4) {
 		tileDataStart = 0x0000
