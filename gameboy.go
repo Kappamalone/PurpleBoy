@@ -21,8 +21,8 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "Pokemon Red"
-	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
+	title   string = "Super Mario Land"
+	testrom string = "roms/testroms/MBC/rom_8mb.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
 	useTestRom bool = false
 )

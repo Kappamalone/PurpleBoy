@@ -47,6 +47,8 @@ func initCartridge(memory *memory) *cartridge {
 func getMBCNum(hexvalue uint8) uint8 {
 	mbcNum := uint8(0xFF)
 	switch hexvalue {
+	case 0x0:
+		mbcNum = 0
 	case 0x1, 0x2, 0x3:
 		mbcNum = 1
 	case 0x5, 0x6:
@@ -87,6 +89,7 @@ func (cart *cartridge) loadRom(path string) {
 
 func (cart *cartridge) readCartridge(addr uint16) uint8 {
 	readByte := uint8(0)
+	//println(cart.ROM[0x3F * 0x4000 + 0x3FFF])
 	if cart.MBC == 0 {
 		//No memory banking
 		readByte = cart.ROM[addr]
@@ -97,7 +100,12 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 				readByte = cart.ROM[addr]
 			} else {
 				//The 2 special bits can map to 0x00,0x20,0x40,0x60 banks
-				readByte = cart.ROM[(cart.special2Bit*0x20*0x4000)+int(addr)]
+				if cart.ROMSize == 0x5 {
+					//Wrap the additional bit
+					readByte = cart.ROM[((cart.special2Bit & 1)*0x20*0x4000)+int(addr)]
+				} else {
+					readByte = cart.ROM[((cart.special2Bit)*0x20*0x4000)+int(addr)]
+				}
 			}
 		} else {
 			if cart.ROMSize <= 0x4 { //Use regular banking if rom is <= 512 KBytes or lower
@@ -105,7 +113,12 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 				readByte = cart.ROM[(cart.rombankNum*0x4000)+(int(addr)-0x4000)]
 			} else {
 				//Advanced Rom banking
-				readByte = cart.ROM[(cart.special2Bit<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
+				if cart.ROMSize == 0x5 {
+					//Wrap the additional bit
+					readByte = cart.ROM[((cart.special2Bit & 1)<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
+				} else {
+					readByte = cart.ROM[(cart.special2Bit<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
+				}
 			}
 		}
 	} else if cart.MBC == 2 {
@@ -182,15 +195,8 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 		}
 
 	} else if inRange(addr, 0x4000, 0x5FFF) {
-		if cart.MBC == 1 {
-			if cart.ROMSize == 0x05 { //Wrapping sucks
-				cart.special2Bit = int(data) & 0x1
-			} else {
-				cart.special2Bit = int(data) & 0x3
-			}
-		} else {
-			cart.special2Bit = int(data) & 0x3
-		}
+		//Used to control RAM/ROM 5th/6th bits
+		cart.special2Bit = int(data) & 0x3
 
 	} else if inRange(addr, 0x6000, 0x7FFF) {
 		//Banking mode select

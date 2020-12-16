@@ -6,7 +6,7 @@ var (
 
 func (cpu *gameboyCPU) handleInterrupts() {
 	//Interrupt service routine
-	if (cpu.IE & cpu.IF & 0x1F) != 0 {
+	if ((cpu.IE & cpu.IF) & 0x1F) != 0 {
 		cpu.HALT = false
 	}
 

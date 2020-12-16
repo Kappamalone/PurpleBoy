@@ -219,7 +219,7 @@ func (ppu *PPU) drawScanline() {
 	usingWindow := false
 	windowX := uint8(0)
 	if ppu.WX <= 7{ //Pesky underflows!
-		windowX = 0
+		windowX = 7 - ppu.WX
 	} else {
 		windowX = ppu.WX - 7
 	}
@@ -282,8 +282,7 @@ func (ppu *PPU) drawScanline() {
 		//Get colour from palette
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
 		colour := colours[(ppu.palette>>(colourIndex*2))&0x3]
-
-
+		
 		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
 	}
 }
