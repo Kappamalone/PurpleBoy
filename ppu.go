@@ -322,7 +322,7 @@ func (ppu *PPU) drawSprites() {
 
 		spritePalSelect := bitSet(attrs,4)
 		xflip := bitSet(attrs,5)
-		bgPriority := bitSet(attrs,8)
+		bgPriority := bitSet(attrs,7)
 
 		row := uint16(ppu.LY - y) //TOOD: y flip
 		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]
@@ -345,11 +345,11 @@ func (ppu *PPU) drawSprites() {
 				}
 
 				if !bgPriority { //BG-OBJ priority
-					if x+col <= 160{
+					if x+col <= 160 && colourIndex != 0{
 						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
 					}
 				} else {
-					if x+col <= 160 && ppu.getPixelColour(x+col,int(ppu.LY)) == white {
+					if x+col <= 160 && colourIndex != 0 && ppu.getPixelColour(x+col,int(ppu.LY)) == white {
 						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
 					}
 				}
@@ -370,9 +370,8 @@ func (ppu *PPU) getPixelColour(x int, y int) uint32 {
 	//Gets the colour from a given coordinate
 	byte1 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)]
 	byte2 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+1]
-	byte3 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+1]
-	println(uint32(byte1) << 16 | uint32(byte2) << 8 | uint32(byte3) == white)
-	panic("dfdffadf")
+	byte3 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+2]
+
 	return uint32(byte1) << 16 | uint32(byte2) << 8 | uint32(byte3)
 }
 
