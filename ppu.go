@@ -214,7 +214,6 @@ func (ppu *PPU) compareLYC() {
 }
 
 func (ppu *PPU) drawScanline() {
-	ppu.drawSprites()
 	ppu.drawBG()
 	ppu.drawSprites()
 }
@@ -234,18 +233,10 @@ func (ppu *PPU) drawBG() {
 
 	tileMap := 0x1800 //Both BG and window use 0x1800 as the default map
 	if bitSet(ppu.LCDC, 5) && ppu.WY <= ppu.LY {
-		//Window tile map select
 		//For future reference: We check the line to see if it has entered the window region, since ppu.WY is usually fixed (i think)
 		usingWindow = true
-		if bitSet(ppu.LCDC, 6) {
-			tileMap = 0x1C00
-		}
-	} else {
-		//BG tilemap select
-		if bitSet(ppu.LCDC, 3) {
-			tileMap = 0x1C00
-		}
 	}
+	
 	tileDataStart := uint16(0x1000) //Signed!
 	if bitSet(ppu.LCDC, 4) {
 		tileDataStart = 0x0000
@@ -258,8 +249,20 @@ func (ppu *PPU) drawBG() {
 			//Window
 			ycoordOffset = int(ppu.LY - ppu.WY)
 			xcoordOffset = int(uint8(x) - windowX)
+
+			if bitSet(ppu.LCDC, 6) {
+				tileMap = 0x1C00
+			} else {
+				tileMap = 0x1800
+			}
 		} else {
 			//BG
+				//BG tilemap select
+			if bitSet(ppu.LCDC, 3) {
+				tileMap = 0x1C00
+			} else {
+				tileMap = 0x1800
+			}
 			xcoordOffset = int(uint8(x) + ppu.SCX)
 			ycoordOffset = int(ppu.LY + ppu.SCY)
 		}
