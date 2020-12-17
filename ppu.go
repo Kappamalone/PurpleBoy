@@ -58,9 +58,11 @@ type PPU struct {
 	//PPU internal variables
 	ppuEnabled bool
 
-	palette uint8
-	LCDC    uint8
-	LCDSTAT uint8
+	palette        uint8 //For background
+	spritePalette1 uint8 //For sprites
+	spritePalette2 uint8 //For sprites
+	LCDC           uint8
+	LCDSTAT        uint8
 
 	SCX uint8
 	SCY uint8
@@ -104,7 +106,7 @@ func initSDL() (*sdl.Window, *sdl.Renderer) {
 	mWindowPosY := int32(sdl.WINDOWPOS_UNDEFINED)
 
 	//Initialise SDL
-	checkErr(sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK), "SDL initialisation error")
+	checkErr(sdl.Init(sdl.INIT_VIDEO|sdl.INIT_JOYSTICK), "SDL initialisation error")
 
 	//Create window
 	if isDebugging {
@@ -203,7 +205,7 @@ func (ppu *PPU) compareLYC() {
 		ppu.LCDSTAT |= 0x04
 
 		//If LYC=LY interrupt enable, request
-		if bitSet(ppu.LCDSTAT,6){
+		if bitSet(ppu.LCDSTAT, 6) {
 			ppu.gb.cpu.requestSTAT()
 		}
 	} else {
@@ -212,20 +214,26 @@ func (ppu *PPU) compareLYC() {
 }
 
 func (ppu *PPU) drawScanline() {
+	ppu.drawSprites()
+	ppu.drawBG()
+	ppu.drawSprites()
+}
+
+func (ppu *PPU) drawBG() {
 	//Draw a scanline here
-	if !bitSet(ppu.LCDC,0){ //Basically background enable master flag
+	if !bitSet(ppu.LCDC, 0) { //Basically background enable master flag
 		return
 	}
 	usingWindow := false
 	windowX := uint8(0)
-	if ppu.WX <= 7{ //Pesky underflows!
+	if ppu.WX <= 7 { //Pesky underflows!
 		windowX = 7 - ppu.WX
 	} else {
 		windowX = ppu.WX - 7
 	}
 
 	tileMap := 0x1800 //Both BG and window use 0x1800 as the default map
-	if bitSet(ppu.LCDC,5) && ppu.WY <= ppu.LY{
+	if bitSet(ppu.LCDC, 5) && ppu.WY <= ppu.LY {
 		//Window tile map select
 		//For future reference: We check the line to see if it has entered the window region, since ppu.WY is usually fixed (i think)
 		usingWindow = true
@@ -234,7 +242,7 @@ func (ppu *PPU) drawScanline() {
 		}
 	} else {
 		//BG tilemap select
-		if bitSet(ppu.LCDC,3) {
+		if bitSet(ppu.LCDC, 3) {
 			tileMap = 0x1C00
 		}
 	}
@@ -246,21 +254,19 @@ func (ppu *PPU) drawScanline() {
 	for x := 0; x < 160; x++ {
 		xcoordOffset := int(0)
 		ycoordOffset := int(0)
-		if usingWindow && windowX <= uint8(x){
+		if usingWindow && windowX <= uint8(x) {
 			//Window
 			ycoordOffset = int(ppu.LY - ppu.WY)
 			xcoordOffset = int(uint8(x) - windowX)
-		}  else {
+		} else {
 			//BG
 			xcoordOffset = int(uint8(x) + ppu.SCX)
 			ycoordOffset = int(ppu.LY + ppu.SCY)
 		}
 
-		
 		row := ycoordOffset % 8                  //Which row of the tile is used for the line
 		tileMapOffset := (ycoordOffset / 8) * 32 //Offset for the tilemap
 
-		
 		tile := xcoordOffset / 8 //Which tile we're using from tile map
 		col := xcoordOffset % 8  //Which bit from the 2 bytes are drawing
 
@@ -282,8 +288,73 @@ func (ppu *PPU) drawScanline() {
 		//Get colour from palette
 		colourIndex := ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
 		colour := colours[(ppu.palette>>(colourIndex*2))&0x3]
-		
+
 		ppu.drawPixel(ppu.frameBuffer, screenWidth, x, int(ppu.LY), colour)
+	}
+}
+
+func (ppu *PPU) drawSprites() {
+	if !bitSet(ppu.LCDC, 0) { //Sprite Enable
+		return
+	}
+
+	sprites := [][]uint8{}
+	for i := 0; i < 0xA0; i += 4 {
+		if len(sprites) <= 10 {
+			spriteSize := uint8(8)
+			if bitSet(ppu.LCDC, 2) {
+				spriteSize = 16
+			}
+			y := ppu.gb.mmu.OAM[i] - 16
+			if y <= ppu.LY && ppu.LY < y+spriteSize {
+				sprites = append(sprites, []uint8{y, ppu.gb.mmu.OAM[i+1] - 8, ppu.gb.mmu.OAM[i+2], ppu.gb.mmu.OAM[i+3]})
+			}
+		} else {
+			break
+		}
+	}
+
+	for i := 0; i < len(sprites); i++ {
+		x := int(sprites[i][1])
+		y := sprites[i][0]
+		tileNum := sprites[i][2]
+		attrs := sprites[i][3]
+
+		spritePalSelect := bitSet(attrs,4)
+		xflip := bitSet(attrs,5)
+		bgPriority := bitSet(attrs,8)
+
+		row := uint16(ppu.LY - y) //TOOD: y flip
+		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]
+		byte2 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)+1]
+
+		if x >= 0 && x <= 160 {
+			for col := 0; col < 8; col++ {
+				colour := uint32(0)
+				colourIndex := uint8(0)
+				if xflip{
+					colourIndex = ((byte2 >> col & 1) << 1) | (byte1 >> col & 1)
+				} else {
+					colourIndex = ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
+				}
+
+				if !spritePalSelect { //Sprite Palette select
+					colour = colours[(ppu.spritePalette1>>(colourIndex*2))&0x3]
+				} else {
+					colour = colours[(ppu.spritePalette2>>(colourIndex*2))&0x3]
+				}
+
+				if !bgPriority { //BG-OBJ priority
+					if x+col <= 160{
+						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
+					}
+				} else {
+					if x+col <= 160 && ppu.getPixelColour(x+col,int(ppu.LY)) == white {
+						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -293,6 +364,16 @@ func (ppu *PPU) drawPixel(buffer []uint8, lineWidth int, x int, y int, colour ui
 	buffer[x*4+(y*4*lineWidth)+1] = uint8((colour & 0xFF00) >> 8)
 	buffer[x*4+(y*4*lineWidth)+2] = uint8(colour & 0xFF)
 	buffer[x*4+(y*4*lineWidth)+3] = 0xFF
+}
+
+func (ppu *PPU) getPixelColour(x int, y int) uint32 {
+	//Gets the colour from a given coordinate
+	byte1 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)]
+	byte2 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+1]
+	byte3 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+1]
+	println(uint32(byte1) << 16 | uint32(byte2) << 8 | uint32(byte3) == white)
+	panic("dfdffadf")
+	return uint32(byte1) << 16 | uint32(byte2) << 8 | uint32(byte3)
 }
 
 func (ppu *PPU) drawBuffer(renderer *sdl.Renderer, texture *sdl.Texture, buffer []uint8, lineWidth int) {

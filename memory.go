@@ -15,10 +15,10 @@ type memory struct {
 	//CARTRIDGE: 8KB ram bank
 	//CARTRIDGE: 4KB WRAM !CGB only bankswitching
 
-	WRAM []uint8      //WRAM
-	OAM  [0x100]uint8 //Object attribute memory aka sprite data
-	MMIO [0x80]uint8  //Memory mapped input output
-	HRAM [0x7F]uint8  //High ram
+	WRAM []uint8     //WRAM
+	OAM  [0xA0]uint8 //Object attribute memory aka sprite data
+	MMIO [0x80]uint8 //Memory mapped input output
+	HRAM [0x7F]uint8 //High ram
 }
 
 func initMemory(gb *gameboy, skipBootrom bool) *memory {
@@ -38,6 +38,14 @@ func (mmu *memory) initWRAM() {
 	//Change this if CGB
 	//Initialises 8kb of WRAM
 	mmu.WRAM = make([]uint8, 0x2000)
+}
+
+func (mmu *memory) executeDMA(data uint8) {
+	startAddress := uint16(data) * 0x100
+	for i := 0; i < 0xA0; i++ {
+		readByte := mmu.readbyte(startAddress + uint16(i))
+		mmu.OAM[i] = readByte
+	}
 }
 
 //MMU LOGIC---------------------------
@@ -101,8 +109,14 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF44: //LY is read only
 		case 0xFF45:
 			mmu.gb.ppu.LYC = data
+		case 0xFF46:
+			mmu.executeDMA(data)
 		case 0xFF47:
 			mmu.gb.ppu.palette = data
+		case 0xFF48:
+			mmu.gb.ppu.spritePalette1 = data
+		case 0xFF49:
+			mmu.gb.ppu.spritePalette2 = data
 		case 0xFF4A:
 			mmu.gb.ppu.WY = data
 		case 0xFF4B:
@@ -197,6 +211,10 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.LYC
 		case 0xFF47:
 			readByte = mmu.gb.ppu.palette
+		case 0xFF48:
+			readByte = mmu.gb.ppu.spritePalette1
+		case 0xFF49:
+			readByte = mmu.gb.ppu.spritePalette2
 		case 0xFF4A:
 			readByte = mmu.gb.ppu.WY
 		case 0xFF4B:

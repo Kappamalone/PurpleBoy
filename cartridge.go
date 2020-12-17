@@ -28,7 +28,7 @@ type cartridge struct {
 func initCartridge(memory *memory) *cartridge {
 	//TODO: Battery buffered RAM
 	//While I could've written this using interfaces,
-	//It would've been a lot of extra loc, and since 
+	//It would've been a lot of extra loc, and since
 	//I'm not adding support for every MBC, I'll keep it as is
 	cart := new(cartridge)
 	cart.memory = memory
@@ -102,7 +102,7 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 				//The 2 special bits can map to 0x00,0x20,0x40,0x60 banks
 				if cart.ROMSize == 0x5 {
 					//Wrap the additional bit
-					readByte = cart.ROM[((cart.special2Bit & 1)*0x20*0x4000)+int(addr)]
+					readByte = cart.ROM[((cart.special2Bit&1)*0x20*0x4000)+int(addr)]
 				} else {
 					readByte = cart.ROM[((cart.special2Bit)*0x20*0x4000)+int(addr)]
 				}
@@ -115,7 +115,7 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 				//Advanced Rom banking
 				if cart.ROMSize == 0x5 {
 					//Wrap the additional bit
-					readByte = cart.ROM[((cart.special2Bit & 1)<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
+					readByte = cart.ROM[((cart.special2Bit&1)<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
 				} else {
 					readByte = cart.ROM[(cart.special2Bit<<5|cart.rombankNum)*0x4000+(int(addr)-0x4000)]
 				}
@@ -200,9 +200,7 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 
 	} else if inRange(addr, 0x6000, 0x7FFF) {
 		//Banking mode select
-		if cart.MBC == 1 {
-			cart.bankMode = data & 0x1
-		}
+		cart.bankMode = data & 0x1
 	}
 }
 

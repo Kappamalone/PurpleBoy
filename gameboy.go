@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	ui "github.com/gizak/termui/v3"
 	"github.com/veandco/go-sdl2/sdl"
-	"fmt"
 	"time"
-	"flag"
 )
 
 const (
@@ -21,10 +21,10 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title   string = "Super Mario Land"
-	testrom string = "roms/testroms/MBC/rom_8mb.gb"
-	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb",title)
-	useTestRom bool = false
+	title      string = "Pokemon Red"
+	testrom    string = "roms/testroms/cpu_instrs/cpu_instrs.gb"
+	gamerom    string = fmt.Sprintf("roms/gameroms/%s.gb", title)
+	useTestRom bool   = false
 )
 
 type gameboy struct {
@@ -66,7 +66,7 @@ func (gb *gameboy) handleLogging() {
 
 func main() {
 	//Command line flags
-	flag.BoolVar(&useTestRom,"t",false,"Used for picking gamerom or testrom")
+	flag.BoolVar(&useTestRom, "t", false, "Used for picking gamerom or testrom")
 	flag.Parse()
 
 	gb := initGameboy(skipBootrom, isDebugging)

@@ -94,14 +94,13 @@ func bitSet(data interface{}, place uint8) bool {
 	return isSet
 }
 
-func setBit(data *uint8, place uint8){
+func setBit(data *uint8, place uint8) {
 	*data |= (1 << place)
 }
 
-func clearBit(data *uint8, place uint8){
+func clearBit(data *uint8, place uint8) {
 	*data &^= (1 << place)
 }
-
 
 func inRange(value uint16, lowerBound uint16, upperBound uint16) bool {
 	//Used by MMU to have cleaner looking code
