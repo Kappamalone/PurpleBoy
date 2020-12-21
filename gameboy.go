@@ -21,7 +21,8 @@ var (
 	isDebugging bool = true
 	isLogging   bool = false
 
-	title      string = "Tennis"
+	title      string = "LoZ Link's Awakening"
+	//TODO: Pass MBC2 tests
 	testrom    string = "roms/testroms/cpu_instrs/cpu_instrs.gb"
 	gamerom    string = fmt.Sprintf("roms/gameroms/%s.gb", title)
 	useTestRom bool   = false
@@ -36,6 +37,7 @@ type gameboy struct {
 }
 
 func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
+	//TODO: Remove passing global control vars into structs
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb, skipBootrom)
@@ -59,7 +61,7 @@ func (gb *gameboy) handleDebug() {
 
 func (gb *gameboy) handleLogging() {
 	if isLogging {
-		//gb.debug.logTrace()
+		gb.debug.logTrace()
 		//gb.debug.logValue(gb.mmu.cart.rombankNum)
 	}
 }

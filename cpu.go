@@ -154,6 +154,7 @@ func (cpu *gameboyCPU) tick() {
 	//Run one tick of the gameboy's cpu
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
+			cpu.gb.handleLogging()
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
 
 			//Fetch, decode and execute
@@ -162,6 +163,7 @@ func (cpu *gameboyCPU) tick() {
 			cpu.addCycles(fetchedInstruction)
 			cpu.decodeAndExecute(fetchedInstruction)
 		}
+		
 		if cpu.cycles == 0 {
 			panic("Error found in instruction timing!")
 		}

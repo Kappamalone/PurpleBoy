@@ -43,6 +43,7 @@ func (joypad *joypad) handleInput() bool {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch e := event.(type) {
 			case *sdl.QuitEvent:
+				joypad.gb.mmu.cart.saveBBRAM()
 				endProgram = true
 				break
 			case *sdl.KeyboardEvent:
@@ -61,6 +62,7 @@ func (joypad *joypad) handleInput() bool {
 			switch e := event.(type) {
 			case *sdl.WindowEvent:
 				if e.Event == sdl.WINDOWEVENT_CLOSE {
+					joypad.gb.mmu.cart.saveBBRAM()
 					endProgram = true
 				}
 			case *sdl.KeyboardEvent:

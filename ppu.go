@@ -225,18 +225,20 @@ func (ppu *PPU) drawBG() {
 	}
 	usingWindow := false
 	windowX := uint8(0)
-	if ppu.WX <= 7 { //Pesky underflows!
-		windowX = 7 - ppu.WX
+	if ppu.WX == 7 { //Pesky underflows!
+		windowX = 0 //TODO: Fix one width pixel offset in Aladdin
+	} else if ppu.WX <= 6 {
+		windowX = 6 - ppu.WX
 	} else {
 		windowX = ppu.WX - 7
 	}
 
-	tileMap := 0x1800 //Both BG and window use 0x1800 as the default map
 	if bitSet(ppu.LCDC, 5) && ppu.WY <= ppu.LY {
 		//For future reference: We check the line to see if it has entered the window region, since ppu.WY is usually fixed (i think)
 		usingWindow = true
 	}
-	
+
+	tileMap := 0x1800               //Both BG and window use 0x1800 as the default map
 	tileDataStart := uint16(0x1000) //Signed!
 	if bitSet(ppu.LCDC, 4) {
 		tileDataStart = 0x0000
@@ -250,21 +252,17 @@ func (ppu *PPU) drawBG() {
 			ycoordOffset = int(ppu.LY - ppu.WY)
 			xcoordOffset = int(uint8(x) - windowX)
 
-			if bitSet(ppu.LCDC, 6) {
+			if bitSet(ppu.LCDC, 6) { //Window tilemap select
 				tileMap = 0x1C00
-			} else {
-				tileMap = 0x1800
 			}
 		} else {
 			//BG
-				//BG tilemap select
-			if bitSet(ppu.LCDC, 3) {
-				tileMap = 0x1C00
-			} else {
-				tileMap = 0x1800
-			}
 			xcoordOffset = int(uint8(x) + ppu.SCX)
 			ycoordOffset = int(ppu.LY + ppu.SCY)
+
+			if bitSet(ppu.LCDC, 3) { //BG tilemap select
+				tileMap = 0x1C00
+			}
 		}
 
 		row := ycoordOffset % 8                  //Which row of the tile is used for the line
@@ -303,14 +301,16 @@ func (ppu *PPU) drawSprites() {
 
 	sprites := [][]uint8{}
 	for i := 0; i < 0xA0; i += 4 {
+		//TODO: Fix x <= 8 and y <= 16
 		if len(sprites) <= 10 {
 			spriteSize := uint8(8)
 			if bitSet(ppu.LCDC, 2) {
 				spriteSize = 16
 			}
 			y := ppu.gb.mmu.OAM[i] - 16
+			x := ppu.gb.mmu.OAM[i+1] - 8 
 			if y <= ppu.LY && ppu.LY < y+spriteSize {
-				sprites = append(sprites, []uint8{y, ppu.gb.mmu.OAM[i+1] - 8, ppu.gb.mmu.OAM[i+2], ppu.gb.mmu.OAM[i+3]})
+				sprites = append(sprites, []uint8{y, x, ppu.gb.mmu.OAM[i+2], ppu.gb.mmu.OAM[i+3]})
 			}
 		} else {
 			break
@@ -323,9 +323,9 @@ func (ppu *PPU) drawSprites() {
 		tileNum := sprites[i][2]
 		attrs := sprites[i][3]
 
-		spritePalSelect := bitSet(attrs,4)
-		xflip := bitSet(attrs,5)
-		bgPriority := bitSet(attrs,7)
+		spritePalSelect := bitSet(attrs, 4)
+		xflip := bitSet(attrs, 5)
+		bgPriority := bitSet(attrs, 7)
 
 		row := uint16(ppu.LY - y) //TOOD: y flip
 		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]
@@ -335,7 +335,7 @@ func (ppu *PPU) drawSprites() {
 			for col := 0; col < 8; col++ {
 				colour := uint32(0)
 				colourIndex := uint8(0)
-				if xflip{
+				if xflip {
 					colourIndex = ((byte2 >> col & 1) << 1) | (byte1 >> col & 1)
 				} else {
 					colourIndex = ((byte2 >> (7 - col) & 1) << 1) | (byte1 >> (7 - col) & 1)
@@ -348,11 +348,11 @@ func (ppu *PPU) drawSprites() {
 				}
 
 				if !bgPriority { //BG-OBJ priority
-					if x+col <= 160 && colourIndex != 0{
+					if x+col <= 160 && colourIndex != 0 {
 						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
 					}
 				} else {
-					if x+col <= 160 && colourIndex != 0 && ppu.getPixelColour(x+col,int(ppu.LY)) == white {
+					if x+col <= 160 && colourIndex != 0 && ppu.getPixelColour(x+col, int(ppu.LY)) == white {
 						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
 					}
 				}
@@ -371,11 +371,11 @@ func (ppu *PPU) drawPixel(buffer []uint8, lineWidth int, x int, y int, colour ui
 
 func (ppu *PPU) getPixelColour(x int, y int) uint32 {
 	//Gets the colour from a given coordinate
-	byte1 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)]
-	byte2 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+1]
-	byte3 := ppu.frameBuffer[x * 4 + (y * 4 * screenWidth)+2]
+	byte1 := ppu.frameBuffer[x*4+(y*4*screenWidth)]
+	byte2 := ppu.frameBuffer[x*4+(y*4*screenWidth)+1]
+	byte3 := ppu.frameBuffer[x*4+(y*4*screenWidth)+2]
 
-	return uint32(byte1) << 16 | uint32(byte2) << 8 | uint32(byte3)
+	return uint32(byte1)<<16 | uint32(byte2)<<8 | uint32(byte3)
 }
 
 func (ppu *PPU) drawBuffer(renderer *sdl.Renderer, texture *sdl.Texture, buffer []uint8, lineWidth int) {
