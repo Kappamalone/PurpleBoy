@@ -1,16 +1,16 @@
 package main
 
 import (
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
 	"strings"
 )
 
 var (
 	//Get bitmasks for different rom sizes
 	mbc1BitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F}
-	mbc3BitmaskMap = [7]uint8{0x00,0x3,0x7,0xF,0x1F,0x3F,0x7F}
-	ramSizes      = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
+	mbc3BitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x3F, 0x7F}
+	ramSizes       = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
 )
 
 type cartridge struct {
@@ -22,10 +22,10 @@ type cartridge struct {
 	special2Bit int     //Multi purpose 2 bits used as RAM bank num or Upper bits of rom bank num
 	bankMode    uint8   //Which rom banking mode is in use
 
-	ROMSize  uint8  //Rom size specified for cartridge
-	ERAMSize uint8  //Ram size specified for cartridge
-	usingBBRAM bool //Whether or not battery buffered ram is being used
-	title    string //Title of game
+	ROMSize    uint8  //Rom size specified for cartridge
+	ERAMSize   uint8  //Ram size specified for cartridge
+	usingBBRAM bool   //Whether or not battery buffered ram is being used
+	title      string //Title of game
 
 	ERAM       []uint8 //External RAM
 	ERAMEnable bool    //Used to enable/disable eram
@@ -70,9 +70,9 @@ func getMBCNum(hexvalue uint8) uint8 {
 }
 
 func getBBRAM(hexvalue uint8) bool {
-	usingBBRAM := false 
+	usingBBRAM := false
 	switch hexvalue {
-	case 0x3,0x6,0x9,0xF,0x10,0x13:
+	case 0x3, 0x6, 0x9, 0xF, 0x10, 0x13:
 		usingBBRAM = true
 	}
 	return usingBBRAM
@@ -89,7 +89,7 @@ func (cart *cartridge) initERAM() {
 	cart.loadBBRAM()
 }
 
-func (cart *cartridge) loadBBRAM(){
+func (cart *cartridge) loadBBRAM() {
 	if !cart.usingBBRAM {
 		return
 	}
@@ -104,13 +104,13 @@ func (cart *cartridge) loadBBRAM(){
 	}
 }
 
-func (cart *cartridge) saveBBRAM(){
+func (cart *cartridge) saveBBRAM() {
 	if !cart.usingBBRAM {
 		return
 	}
 	path := fmt.Sprintf("roms/gameroms/%s.sav", cart.title)
-	err := ioutil.WriteFile(path,cart.ERAM,0644) //Golang really out here making my life this easy
-	checkErr(err,"Could not store battery buffered ram!")
+	err := ioutil.WriteFile(path, cart.ERAM, 0644) //Golang really out here making my life this easy
+	checkErr(err, "Could not store battery buffered ram!")
 }
 
 func (cart *cartridge) loadRom(path string) {
@@ -130,12 +130,12 @@ func (cart *cartridge) loadRom(path string) {
 	//Gets title of game from memory
 	chars := make([]string, 0)
 	for i := 0; i < 16; i++ {
-		char := cart.ROM[0x134 + i]
+		char := cart.ROM[0x134+i]
 		if char != 0 {
 			chars = append(chars, fmt.Sprintf("%c", char))
 		}
 	}
-	cart.title = strings.Join(chars,"")
+	cart.title = strings.Join(chars, "")
 }
 
 func (cart *cartridge) readCartridge(addr uint16) uint8 {
@@ -214,11 +214,11 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 	} else if inRange(addr, 0x2000, 0x3FFF) {
 		//ROM Bank select
 		if cart.MBC == 1 {
-				if data&0x1F == 0 {
-					//0x00,0x20,0x40,0x60 Get remapped to one rom bank higher
-					//Which means any byte where the lower 5 bits are 0 get mapped to one a rombank one higher
-					data++
-				}
+			if data&0x1F == 0 {
+				//0x00,0x20,0x40,0x60 Get remapped to one rom bank higher
+				//Which means any byte where the lower 5 bits are 0 get mapped to one a rombank one higher
+				data++
+			}
 			data &= mbc1BitmaskMap[cart.ROMSize]
 			cart.rombankNum = int(data)
 		} else if cart.MBC == 2 {

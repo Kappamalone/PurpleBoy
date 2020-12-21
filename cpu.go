@@ -163,7 +163,7 @@ func (cpu *gameboyCPU) tick(cycle int) {
 			cpu.addCycles(fetchedInstruction)
 			cpu.decodeAndExecute(fetchedInstruction)
 		}
-		
+
 		if cpu.cycles == 0 {
 			panic("Error found in instruction timing!")
 		}
@@ -171,7 +171,7 @@ func (cpu *gameboyCPU) tick(cycle int) {
 
 	} else {
 		//Interrupts are the only way to disable HALT
-		if cycle & 0x3 == 0 { //Check every M-cycle
+		if cycle&0x3 == 0 { //Check every M-cycle
 			cpu.handleInterrupts()
 		}
 	}

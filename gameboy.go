@@ -19,12 +19,12 @@ var (
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
-	useTestRom bool  = false
+	useTestRom  bool = false
 
-	title      string = "Dr Mario"
+	title string = "LoZ Link's Awakening"
 	//TODO: Pass MBC2 tests
-	testrom    string = "roms/testroms/ppu/dmg-acid2.gb"
-	gamerom    string = fmt.Sprintf("roms/gameroms/%s.gb", title)
+	testrom string = "roms/testroms/ppu/dmg-acid2.gb"
+	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb", title)
 )
 
 type gameboy struct {
@@ -39,7 +39,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	//TODO: Remove passing global control vars into structs
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
-	gb.mmu = initMemory(gb, skipBootrom)
+	gb.mmu = initMemory(gb)
 	gb.cpu = initCPU(gb)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)

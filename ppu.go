@@ -216,7 +216,7 @@ func (ppu *PPU) drawBG() {
 	usingWindow := false
 	windowX := uint8(0)
 	if ppu.WX == 7 { //Ugly fix
-		windowX = 0 
+		windowX = 1
 	} else if ppu.WX <= 6 {
 		windowX = 6 - ppu.WX
 	} else {
@@ -298,9 +298,10 @@ func (ppu *PPU) drawSprites() {
 				spriteSize = 16
 			}
 			y := ppu.gb.mmu.OAM[i] - 16
-			x := ppu.gb.mmu.OAM[i+1] - 8 
+			x := ppu.gb.mmu.OAM[i+1] - 8
+
 			if y <= ppu.LY && ppu.LY < y+spriteSize {
-				sprites = append(sprites, []uint8{y, x, ppu.gb.mmu.OAM[i+2], ppu.gb.mmu.OAM[i+3]})
+				sprites = append(sprites, []uint8{y, x, ppu.gb.mmu.OAM[i+2], ppu.gb.mmu.OAM[i+3], spriteSize})
 			}
 		} else {
 			break
@@ -308,28 +309,27 @@ func (ppu *PPU) drawSprites() {
 	}
 
 	for i := 0; i < len(sprites); i++ {
-		x := int(sprites[i][1])
+		x := sprites[i][1]
 		y := sprites[i][0]
 		tileNum := sprites[i][2]
 		attrs := sprites[i][3]
 
+		//spriteSize := sprites[i][4]
 		spritePalSelect := bitSet(attrs, 4)
 		xflip := bitSet(attrs, 5)
-		yflip := bitSet(attrs,6)
+		yflip := bitSet(attrs, 6)
 		bgPriority := bitSet(attrs, 7)
 
-		row := uint16(0)
+		row := uint16(ppu.LY - y)
 		if yflip {
-			row = uint16(ppu.LY - y) //TOOD: y flip
-		} else {
-			row = uint16(ppu.LY - y)
+			//TODO: Y flip
 		}
-	
+
 		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]
 		byte2 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)+1]
-
-		if x >= 0 && x <= 160 {
-			for col := 0; col < 8; col++ {
+		for col := 0; col < 8; col++ {
+			newX := x + uint8(col)
+			if newX >= 0 && newX <= 160 {
 				colour := uint32(0)
 				colourIndex := uint8(0)
 				if xflip {
@@ -345,12 +345,12 @@ func (ppu *PPU) drawSprites() {
 				}
 
 				if !bgPriority { //BG-OBJ priority
-					if x+col <= 160 && colourIndex != 0 {
-						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
+					if newX <= 160 && colourIndex != 0 {
+						ppu.drawPixel(ppu.frameBuffer, screenWidth, int(newX), int(ppu.LY), colour)
 					}
 				} else {
-					if x+col <= 160 && colourIndex != 0 && ppu.getPixelColour(x+col, int(ppu.LY)) == white {
-						ppu.drawPixel(ppu.frameBuffer, screenWidth, x+col, int(ppu.LY), colour)
+					if newX <= 160 && colourIndex != 0 && ppu.getPixelColour(int(newX), int(ppu.LY)) == white {
+						ppu.drawPixel(ppu.frameBuffer, screenWidth, int(newX), int(ppu.LY), colour)
 					}
 				}
 			}

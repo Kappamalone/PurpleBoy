@@ -21,7 +21,7 @@ type memory struct {
 	HRAM [0x7F]uint8 //High ram
 }
 
-func initMemory(gb *gameboy, skipBootrom bool) *memory {
+func initMemory(gb *gameboy) *memory {
 	mmu := new(memory)
 	mmu.gb = gb
 	mmu.bootromEnabled = !skipBootrom
@@ -220,13 +220,12 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 			readByte = mmu.gb.ppu.WX
 		default:
 			readByte = mmu.MMIO[addr-0xFF00]
-			
+
 		}
 
 	} else if inRange(addr, 0xFF80, 0xFFFE) {
 		//HRAM
 		readByte = mmu.HRAM[addr-0xFF80]
-
 
 	} else if inRange(addr, 0xFFFF, 0xFFFF) {
 		//IE Register
