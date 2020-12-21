@@ -2,10 +2,12 @@ package main
 
 import (
 	"io/ioutil"
+	"fmt"
+	"strings"
 )
 
 var (
-	mbcBitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F} //Get bitmasks for different rom sizes on MBC1
+	mbc1BitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F} //Get bitmasks for different rom sizes on MBC1
 	RAMSizes      = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
 )
 
@@ -18,8 +20,10 @@ type cartridge struct {
 	special2Bit int     //Multi purpose 2 bits used as RAM bank num or Upper bits of rom bank num
 	bankMode    uint8   //Which rom banking mode is in use
 
-	ROMSize  uint8 //Rom size specified for cartridge
-	ERAMSize uint8 //Ram size specified for cartridge
+	ROMSize  uint8  //Rom size specified for cartridge
+	ERAMSize uint8  //Ram size specified for cartridge
+	usingBBRAM bool //Whether or not battery buffered ram is being used
+	title    string //Title of game
 
 	ERAM       []uint8 //External RAM
 	ERAMEnable bool    //Used to enable/disable eram
@@ -63,6 +67,15 @@ func getMBCNum(hexvalue uint8) uint8 {
 	return mbcNum
 }
 
+func getBBRAM(hexvalue uint8) bool {
+	usingBBRAM := false 
+	switch hexvalue {
+	case 0x3,0x6,0x9,0xF,0x10,0x13:
+		usingBBRAM = true
+	}
+	return usingBBRAM
+}
+
 func (cart *cartridge) initERAM() {
 	//Depending on RAM num initialise properly sized ERAM
 	if cart.MBC == 1 || cart.MBC == 3 {
@@ -71,6 +84,31 @@ func (cart *cartridge) initERAM() {
 		//MBC2 has 0x800 bits of built in ERAM
 		cart.ERAM = make([]uint8, 0x800)
 	}
+	cart.loadBBRAM()
+}
+
+func (cart *cartridge) loadBBRAM(){
+	if !cart.usingBBRAM {
+		return
+	}
+	path := fmt.Sprintf("roms/gameroms/%s.sav", cart.title)
+	file, err := ioutil.ReadFile(path)
+
+	if err == nil {
+		//Only load BBRAM if BBRAM exists
+		for i := 0; i < len(file); i++ {
+			cart.ERAM[i] = file[i]
+		}
+	}
+}
+
+func (cart *cartridge) saveBBRAM(){
+	if !cart.usingBBRAM {
+		return
+	}
+	path := fmt.Sprintf("roms/gameroms/%s.sav", cart.title)
+	err := ioutil.WriteFile(path,cart.ERAM,0644) //Golang really out here making my life this easy
+	checkErr(err,"Could not store battery buffered ram!")
 }
 
 func (cart *cartridge) loadRom(path string) {
@@ -83,8 +121,19 @@ func (cart *cartridge) loadRom(path string) {
 	}
 
 	cart.MBC = getMBCNum(cart.ROM[0x147])
+	cart.usingBBRAM = getBBRAM(cart.ROM[0x147])
 	cart.ROMSize = cart.ROM[0x0148]
 	cart.ERAMSize = cart.ROM[0x149]
+
+	//Gets title of game from memory
+	chars := make([]string, 0)
+	for i := 0; i < 16; i++ {
+		char := cart.ROM[0x134 + i]
+		if char != 0 {
+			chars = append(chars, fmt.Sprintf("%c", char))
+		}
+	}
+	cart.title = strings.Join(chars,"")
 }
 
 func (cart *cartridge) readCartridge(addr uint16) uint8 {
@@ -156,28 +205,19 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 				if data == 0 {
 					data = 1
 				}
-				data &= mbcBitmaskMap[cart.ROMSize]
+				data &= mbc1BitmaskMap[cart.ROMSize]
 				cart.rombankNum = int(data)
 			}
 		}
 	} else if inRange(addr, 0x2000, 0x3FFF) {
 		//ROM Bank select
-		if cart.MBC == 1 || cart.MBC == 3 {
-			if cart.MBC == 1 {
+		if cart.MBC == 1 {
 				if data&0x1F == 0 {
 					//0x00,0x20,0x40,0x60 Get remapped to one rom bank higher
 					//Which means any byte where the lower 5 bits are 0 get mapped to one a rombank one higher
 					data++
 				}
-				data &= mbcBitmaskMap[cart.ROMSize]
-
-			} else if cart.MBC == 3 {
-				//0x20,0x40 and 0x60 aren't affected in MBC3
-				if data == 0 {
-					data = 1
-				}
-				data &= mbcBitmaskMap[cart.ROMSize]
-			}
+			data &= mbc1BitmaskMap[cart.ROMSize]
 			cart.rombankNum = int(data)
 		} else if cart.MBC == 2 {
 			//Handle writes
@@ -189,9 +229,16 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 				if data == 0 {
 					data = 1
 				}
-				data &= mbcBitmaskMap[cart.ROMSize]
+				data &= mbc1BitmaskMap[cart.ROMSize]
 				cart.rombankNum = int(data)
 			}
+		} else if cart.MBC == 3 {
+			//0x20,0x40 and 0x60 aren't affected in MBC3
+			//Meaning we don't have to apply the mask
+			if data == 0 {
+				data = 1
+			}
+			cart.rombankNum = int(data)
 		}
 
 	} else if inRange(addr, 0x4000, 0x5FFF) {
