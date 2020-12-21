@@ -131,10 +131,10 @@ func (joypad *joypad) SDLHandleController(e *sdl.JoyButtonEvent) {
 		joypad.gb.cpu.requestJoypad() //TODO: Don't do this
 		switch e.Button {
 		//Buttons
-		case 9: //Start:  Enter
-			clearBit(&joypad.buttons, 3)
-		case 10: //Select: Shift
+		case 9: //Select:  Enter
 			clearBit(&joypad.buttons, 2)
+		case 10: //Start: Shift
+			clearBit(&joypad.buttons, 3)
 		case 0: //B: Z
 			clearBit(&joypad.buttons, 1)
 		case 1: //A: X
@@ -152,10 +152,10 @@ func (joypad *joypad) SDLHandleController(e *sdl.JoyButtonEvent) {
 	} else if e.Type == sdl.JOYBUTTONUP {
 		//Buttons
 		switch e.Button {
-		case 9: //Start:  Enter
-			setBit(&joypad.buttons, 3)
-		case 10: //Select: Shift
+		case 9: //Select:  Enter
 			setBit(&joypad.buttons, 2)
+		case 10: //Start: Shift
+			setBit(&joypad.buttons, 3)
 		case 0: //B: Z
 			setBit(&joypad.buttons, 1)
 		case 1: //A: X

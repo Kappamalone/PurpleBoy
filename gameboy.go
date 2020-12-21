@@ -16,16 +16,15 @@ const (
 )
 
 var (
-	//TODO: Check if FF Adventure's scrolling text has correct bgp values
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
+	useTestRom bool  = false
 
 	title      string = "LoZ Link's Awakening"
 	//TODO: Pass MBC2 tests
-	testrom    string = "roms/testroms/cpu_instrs/cpu_instrs.gb"
+	testrom    string = "roms/testroms/ppu/dmg-acid2.gb"
 	gamerom    string = fmt.Sprintf("roms/gameroms/%s.gb", title)
-	useTestRom bool   = false
 )
 
 type gameboy struct {
@@ -41,7 +40,7 @@ func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb, skipBootrom)
-	gb.cpu = initCPU(gb, skipBootrom)
+	gb.cpu = initCPU(gb)
 	if isDebugging {
 		gb.debug = initDebugger(gb, isLogging)
 	}
@@ -61,7 +60,7 @@ func (gb *gameboy) handleDebug() {
 
 func (gb *gameboy) handleLogging() {
 	if isLogging {
-		gb.debug.logTrace()
+		//gb.debug.logTrace()
 		//gb.debug.logValue(gb.mmu.cart.rombankNum)
 	}
 }
@@ -84,7 +83,7 @@ func main() {
 
 		for i := 0; i < cyclesPerFrame; i++ {
 			//System is clocked at 4.2MHZ
-			gb.cpu.tick()
+			gb.cpu.tick(i)
 			gb.ppu.tick()
 			gb.cpu.timers.tick()
 

@@ -124,7 +124,6 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 		case 0xFF50:
 			mmu.bootromEnabled = (data == 0) //Bootrom writes a non-zero value here to unmap bootrom from memory
 		default:
-			//mmu.gb.debug.logWrite(addr)
 			mmu.MMIO[addr-0xFF00] = data
 		}
 
@@ -220,13 +219,14 @@ func (mmu *memory) readbyte(addr uint16) uint8 {
 		case 0xFF4B:
 			readByte = mmu.gb.ppu.WX
 		default:
-			//mmu.gb.debug.logRead(addr)
 			readByte = mmu.MMIO[addr-0xFF00]
+			
 		}
 
 	} else if inRange(addr, 0xFF80, 0xFFFE) {
 		//HRAM
 		readByte = mmu.HRAM[addr-0xFF80]
+
 
 	} else if inRange(addr, 0xFFFF, 0xFFFF) {
 		//IE Register

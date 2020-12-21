@@ -27,7 +27,7 @@ func (timers *timers) tick() {
 		if timers.clock == frequency[timers.TAC&0x3] {
 			if timers.TIMA == 0xFF {
 				timers.TIMA = timers.TMA
-				timers.cpu.requestTimer()
+				//timers.cpu.requestTimer()
 			} else {
 				timers.TIMA++
 			}

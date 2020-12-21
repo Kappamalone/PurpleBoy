@@ -22,7 +22,7 @@ func (cpu *gameboyCPU) handleInterrupts() {
 				cpu.IF &= ^(1 << bit)                 //Disable requested interrupt
 				cpu.PC = uint16(0x0040 + (0x8 * bit)) //Jump to INT vec
 				cpu.IME = false
-				cpu.cycles += 20
+				cpu.cycles += 40
 
 				if isDebugging {
 					cpu.gb.debug.printInterrupt(interrupts[bit])

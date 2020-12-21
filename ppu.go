@@ -141,8 +141,6 @@ func (ppu *PPU) tick() {
 	//TODO: proper cpu privileges when accessing data
 	ppu.ppuEnabled = bitSet(ppu.LCDC, 7)
 	if !ppu.ppuEnabled {
-		ppu.mode = Hblank
-		ppu.LY = 0
 		return
 	}
 
@@ -168,8 +166,8 @@ func (ppu *PPU) tick() {
 			ppu.dotClock = -1
 			ppu.LY++
 			if ppu.LY == 144 {
-				ppu.gb.cpu.requestVblank()
 				ppu.mode = Vblank
+				ppu.gb.cpu.requestVblank()
 			} else {
 				ppu.mode = OAMSearch
 			}
@@ -225,8 +223,8 @@ func (ppu *PPU) drawBG() {
 	}
 	usingWindow := false
 	windowX := uint8(0)
-	if ppu.WX == 7 { //Pesky underflows!
-		windowX = 0 //TODO: Fix one width pixel offset in Aladdin
+	if ppu.WX == 7 { //Ugly fix
+		windowX = 0 
 	} else if ppu.WX <= 6 {
 		windowX = 6 - ppu.WX
 	} else {
@@ -325,9 +323,16 @@ func (ppu *PPU) drawSprites() {
 
 		spritePalSelect := bitSet(attrs, 4)
 		xflip := bitSet(attrs, 5)
+		yflip := bitSet(attrs,6)
 		bgPriority := bitSet(attrs, 7)
 
-		row := uint16(ppu.LY - y) //TOOD: y flip
+		row := uint16(0)
+		if yflip {
+			row = uint16(ppu.LY - y) //TOOD: y flip
+		} else {
+			row = uint16(ppu.LY - y)
+		}
+	
 		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]
 		byte2 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)+1]
 

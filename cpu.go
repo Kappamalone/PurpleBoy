@@ -138,7 +138,7 @@ func (cpu *gameboyCPU) initMaps() {
 	}
 }
 
-func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
+func initCPU(gb *gameboy) *gameboyCPU {
 	cpu := new(gameboyCPU)
 	cpu.gb = gb
 	cpu.timers = initTimers(cpu)
@@ -150,11 +150,11 @@ func initCPU(gb *gameboy, skipBootrom bool) *gameboyCPU {
 	return cpu
 }
 
-func (cpu *gameboyCPU) tick() {
+func (cpu *gameboyCPU) tick(cycle int) {
 	//Run one tick of the gameboy's cpu
+	cpu.gb.handleLogging()
 	if !cpu.HALT {
 		if cpu.cycles == 0 {
-			cpu.gb.handleLogging()
 			cpu.handleInterrupts() //Should handle interrupts on an instruction-by-instruction basis, not every tick!
 
 			//Fetch, decode and execute
@@ -168,9 +168,12 @@ func (cpu *gameboyCPU) tick() {
 			panic("Error found in instruction timing!")
 		}
 		cpu.cycles--
+
 	} else {
 		//Interrupts are the only way to disable HALT
-		cpu.handleInterrupts()
+		if cycle & 0x3 == 0 { //Check every M-cycle
+			cpu.handleInterrupts()
+		}
 	}
 }
 
@@ -196,7 +199,7 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 
 	} else if opcode == 0x10 {
 		//STOP <- Not really sure
-
+		panic("Stop encountered")
 	} else if opcode == 0x18 {
 		//JR (unconditional)
 		cpu.JR(cpu.d8())

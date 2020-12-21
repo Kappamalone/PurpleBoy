@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	mbc1BitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F} //Get bitmasks for different rom sizes on MBC1
-	RAMSizes      = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
+	//Get bitmasks for different rom sizes
+	mbc1BitmaskMap = [7]uint8{0x00, 0x3, 0x7, 0xF, 0x1F, 0x1F, 0x1F}
+	mbc3BitmaskMap = [7]uint8{0x00,0x3,0x7,0xF,0x1F,0x3F,0x7F}
+	ramSizes      = [4]int{0x0000, 0x0500, 0x2000, 0x8000}
 )
 
 type cartridge struct {
@@ -79,7 +81,7 @@ func getBBRAM(hexvalue uint8) bool {
 func (cart *cartridge) initERAM() {
 	//Depending on RAM num initialise properly sized ERAM
 	if cart.MBC == 1 || cart.MBC == 3 {
-		cart.ERAM = make([]uint8, RAMSizes[cart.ERAMSize])
+		cart.ERAM = make([]uint8, ramSizes[cart.ERAMSize])
 	} else if cart.MBC == 2 {
 		//MBC2 has 0x800 bits of built in ERAM
 		cart.ERAM = make([]uint8, 0x800)
@@ -238,6 +240,7 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 			if data == 0 {
 				data = 1
 			}
+			data &= mbc3BitmaskMap[cart.ROMSize]
 			cart.rombankNum = int(data)
 		}
 
