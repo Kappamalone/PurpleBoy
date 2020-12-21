@@ -99,9 +99,13 @@ func (mmu *memory) writebyte(addr uint16, data uint8) {
 			mmu.gb.cpu.IF = data
 		//PPU MMIO
 		case 0xFF40:
+			if !bitSet(data,7) && !mmu.gb.ppu.ppuEnabled{ //Frankly I don't get why this works and why I need to check if the ppu is disabled first?
+				mmu.gb.ppu.LY = 0
+				mmu.gb.ppu.mode = Hblank
+			}
 			mmu.gb.ppu.LCDC = data
 		case 0xFF41:
-			mmu.gb.ppu.LCDSTAT = (data & 0xF8) | uint8(mmu.gb.ppu.mode)
+			mmu.gb.ppu.LCDSTAT = data
 		case 0xFF42:
 			mmu.gb.ppu.SCY = data
 		case 0xFF43:
