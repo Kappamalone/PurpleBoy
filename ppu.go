@@ -56,8 +56,6 @@ type PPU struct {
 	tileFramebuffer []uint8
 
 	//PPU internal variables
-	ppuEnabled bool
-
 	palette        uint8 //For background
 	spritePalette1 uint8 //For sprites
 	spritePalette2 uint8 //For sprites
@@ -95,7 +93,6 @@ func initPPU(gb *gameboy) *PPU {
 	ppu.texture, _ = ppu.renderer.CreateTexture(uint32(sdl.PIXELFORMAT_RGBA32), sdl.TEXTUREACCESS_STREAMING, screenWidth, screenHeight)
 
 	ppu.mode = 2
-	ppu.ppuEnabled = true
 
 	return ppu
 }
@@ -139,10 +136,6 @@ func initSDLDebugging() (*sdl.Window, *sdl.Renderer) {
 
 func (ppu *PPU) tick() {
 	//TODO: proper cpu privileges when accessing data
-	if !ppu.ppuEnabled {
-		return
-	}
-
 	switch ppu.mode {
 	//Request LCDSTAT interrupts if corresponding bit set in LCDSTAT
 	case OAMSearch:

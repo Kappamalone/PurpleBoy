@@ -21,7 +21,7 @@ var (
 	isLogging   bool = false
 	useTestRom bool  = false
 
-	title      string = "Super Mario Land"
+	title      string = "Dr Mario"
 	//TODO: Pass MBC2 tests
 	testrom    string = "roms/testroms/ppu/dmg-acid2.gb"
 	gamerom    string = fmt.Sprintf("roms/gameroms/%s.gb", title)
