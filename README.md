@@ -61,8 +61,8 @@ All of the resources below were extremely helpful during development of the emul
 - https://github.com/mattrberry/CryBoy
 
 ## Credits
-- [wheremyfoodat](https://github.com/wheremyfoodat): An invaluable (and very patient) mentor to me throughout development and personally
-helped locate pesky bugs
+- [wheremyfoodat](https://github.com/wheremyfoodat): An invaluable (and very patient) mentor to me throughout development and also
+helped locate numerous pesky bugs
 - The wonderful folks over at the r/emudev discord server :D
 
 
