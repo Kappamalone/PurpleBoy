@@ -29,10 +29,10 @@ const (
 
 var (
 	//Gameboy colours
-	dark   = uint32(0x46425e)
-	ldark  = uint32(0x5b768d)
-	lwhite = uint32(0xd17c7c)
-	white  = uint32(0xf6c6a8)
+	dark     = uint32(0x2d1b00)
+	ldark    = uint32(0x1e606e)
+	lwhite   = uint32(0x5ab9a8)
+	white    = uint32(0xc4f0c2)
 
 	colours = [4]uint32{white, lwhite, ldark, dark}
 )

@@ -20,9 +20,10 @@ var (
 	isLogging   bool = false
 	useTestRom  bool = false
 
-	title   string = "Metroid II"
-	testrom string = "roms/testroms/mbc/mbc2/ram.gb"
+	title   string = "FF Adventure"
+	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb", title)
+	inputROM string
 )
 
 type gameboy struct {
@@ -33,7 +34,7 @@ type gameboy struct {
 	debug  *debugger
 }
 
-func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
+func initGameboy() *gameboy {
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb)
@@ -62,12 +63,20 @@ func (gb *gameboy) handleLogging() {
 	}
 }
 
+
 func main() {
 	//Command line flags
-	flag.BoolVar(&useTestRom, "t", false, "Used for picking gamerom or testrom")
+	flag.BoolVar(&skipBootrom, "skip", true, "Used for disabling skipping the bootrom")
+	flag.StringVar(&inputROM,"path","","Used to input path of ROM")
+	flag.BoolVar(&useTestRom,  "t", false, "Used for picking gamerom or testrom")
 	flag.Parse()
 
-	gb := initGameboy(skipBootrom, isDebugging)
+	if inputROM != "" {
+		//This is here because I didn't setup a development branch :P
+		gamerom = inputROM + ".gb"
+	}
+
+	gb := initGameboy()
 	ticker := time.NewTicker(16 * time.Millisecond)
 
 	if isLogging {

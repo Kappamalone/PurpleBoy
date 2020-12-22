@@ -81,7 +81,7 @@ func (joypad *joypad) handleInput() bool {
 }
 func (joypad *joypad) SDLHandleKeyboard(e *sdl.KeyboardEvent) {
 	if e.Type == sdl.KEYDOWN {
-		joypad.gb.cpu.requestJoypad() //TODO: Don't do this
+		joypad.gb.cpu.requestJoypad()
 		switch e.Keysym.Scancode {
 		//Buttons
 		case 40: //Start:  Enter
@@ -128,7 +128,7 @@ func (joypad *joypad) SDLHandleKeyboard(e *sdl.KeyboardEvent) {
 
 func (joypad *joypad) SDLHandleController(e *sdl.JoyButtonEvent) {
 	if e.Type == sdl.JOYBUTTONDOWN {
-		joypad.gb.cpu.requestJoypad() //TODO: Don't do this
+		joypad.gb.cpu.requestJoypad()
 		switch e.Button {
 		//Buttons
 		case 9: //Select:  Enter

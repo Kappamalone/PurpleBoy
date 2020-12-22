@@ -1,7 +1,5 @@
 package main
 
-import ()
-
 //Addressing modes
 func (cpu *gameboyCPU) d8() uint8 {
 	immediateData := cpu.gb.mmu.readbyte(cpu.PC)

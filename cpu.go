@@ -196,8 +196,8 @@ func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
 		cpu.gb.mmu.writeword(cpu.d16(), cpu.SP)
 
 	} else if opcode == 0x10 {
-		//STOP <- Not really sure
-		panic("Stop encountered")
+		//STOP Doesn't do anything afaik, but it is two bytes long
+		cpu.d8()
 	} else if opcode == 0x18 {
 		//JR (unconditional)
 		cpu.JR(cpu.d8())
