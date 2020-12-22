@@ -8,22 +8,20 @@ import (
 	"time"
 )
 
-const (
+var (
 	//The gameboy is clocked at a speed of 4.194304 MHz,
 	//Therefore each frame you'd execute 1/60 of that total amount
 	clockspeed     = 4194304
-	cyclesPerFrame = clockspeed / 60
-)
+	cyclesPerFrame = int(float32(clockspeed) / 59.73)
 
-var (
+	//Global control vars
 	skipBootrom bool = true
 	isDebugging bool = true
 	isLogging   bool = false
 	useTestRom  bool = false
 
-	title string = "LoZ Link's Awakening"
-	//TODO: Pass MBC2 tests
-	testrom string = "roms/testroms/ppu/dmg-acid2.gb"
+	title   string = "Metroid II"
+	testrom string = "roms/testroms/mbc/mbc2/ram.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb", title)
 )
 
@@ -36,13 +34,12 @@ type gameboy struct {
 }
 
 func initGameboy(skipBootrom bool, isDebugging bool) *gameboy {
-	//TODO: Remove passing global control vars into structs
 	gb := new(gameboy)
 	gb.ppu = initPPU(gb)
 	gb.mmu = initMemory(gb)
 	gb.cpu = initCPU(gb)
 	if isDebugging {
-		gb.debug = initDebugger(gb, isLogging)
+		gb.debug = initDebugger(gb)
 	}
 	gb.joypad = initJoypad(gb)
 

@@ -53,10 +53,9 @@ func (debug *debugger) displayLogo() {
 	debug.printConsole(fmt.Sprintf("MBC: 0x%02X\n", debug.gb.mmu.cart.MBC), "green")
 	debug.printConsole(fmt.Sprintf("RAM: 0x%02X\n", debug.gb.mmu.cart.ERAMSize), "green")
 	debug.printConsole(fmt.Sprintf("ROM Size: 0x%02X\n", debug.gb.mmu.cart.ROMSize), "green")
-	debug.printConsole(fmt.Sprintf("Mask: 0x%08b\n", mbc1BitmaskMap[debug.gb.mmu.cart.ROMSize]), "green")
 }
 
-func initDebugger(gb *gameboy, isLogging bool) *debugger {
+func initDebugger(gb *gameboy) *debugger {
 	debug := new(debugger)
 	debug.gb = gb
 

@@ -32,10 +32,10 @@ type cartridge struct {
 }
 
 func initCartridge(memory *memory) *cartridge {
-	//TODO: Battery buffered RAM
 	//While I could've written this using interfaces,
 	//It would've been a lot of extra loc, and since
 	//I'm not adding support for every MBC, I'll keep it as is
+	//TODO: Pass MBC2 tests
 	cart := new(cartridge)
 	cart.memory = memory
 	cart.rombankNum = 1
@@ -80,11 +80,15 @@ func getBBRAM(hexvalue uint8) bool {
 
 func (cart *cartridge) initERAM() {
 	//Depending on RAM num initialise properly sized ERAM
-	if cart.MBC == 1 || cart.MBC == 3 {
+	if cart.MBC == 1 {
 		cart.ERAM = make([]uint8, ramSizes[cart.ERAMSize])
+
 	} else if cart.MBC == 2 {
-		//MBC2 has 0x800 bits of built in ERAM
-		cart.ERAM = make([]uint8, 0x800)
+		//MBC2 has 0x200 bits of built in ERAM
+		cart.ERAM = make([]uint8, 0x200)
+
+	} else if cart.MBC == 3 {
+		cart.ERAM = make([]uint8, ramSizes[cart.ERAMSize])
 	}
 	cart.loadBBRAM()
 }
@@ -93,6 +97,7 @@ func (cart *cartridge) loadBBRAM() {
 	if !cart.usingBBRAM {
 		return
 	}
+
 	path := fmt.Sprintf("roms/gameroms/%s.sav", cart.title)
 	file, err := ioutil.ReadFile(path)
 
@@ -105,7 +110,7 @@ func (cart *cartridge) loadBBRAM() {
 }
 
 func (cart *cartridge) saveBBRAM() {
-	if !cart.usingBBRAM {
+	if !cart.usingBBRAM || cart.title == "mooneye-gb test" { //The mooneye-gb test suite for some reason enables BBRAM
 		return
 	}
 	path := fmt.Sprintf("roms/gameroms/%s.sav", cart.title)
@@ -195,7 +200,7 @@ func (cart *cartridge) readCartridge(addr uint16) uint8 {
 func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 	if inRange(addr, 0x0000, 0x1FFF) {
 		//ERAM enable/disable
-		if cart.MBC == 1 || cart.MBC == 3 {
+		if cart.MBC == 1{
 			cart.ERAMEnable = (data & 0xF) == 0xA
 		} else if cart.MBC == 2 {
 			//Handle writes
@@ -204,12 +209,14 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 				cart.ERAMEnable = (data & 0xF) == 0xA
 			} else {
 				//ROM Write
-				if data == 0 {
+				if data&0xF == 0 { //Only lower 4 bits considered
 					data = 1
 				}
 				data &= mbc1BitmaskMap[cart.ROMSize]
 				cart.rombankNum = int(data)
 			}
+		} else if cart.MBC == 3 {
+			cart.ERAMEnable = (data & 0xF) == 0xA
 		}
 	} else if inRange(addr, 0x2000, 0x3FFF) {
 		//ROM Bank select
@@ -228,7 +235,7 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 				cart.ERAMEnable = (data & 0xF) == 0xA
 			} else {
 				//ROM Write
-				if data == 0 {
+				if data&0xF == 0 { //Only lower 4 bits considered
 					data = 1
 				}
 				data &= mbc1BitmaskMap[cart.ROMSize]
@@ -256,8 +263,12 @@ func (cart *cartridge) writeCartridge(addr uint16, data uint8) {
 
 func (cart *cartridge) readERAM(addr uint16) uint8 {
 	readByte := uint8(0xFF)
+	if !cart.ERAMEnable{
+		return readByte
+	}
+	
 	if cart.MBC == 1 || cart.MBC == 3 {
-		if cart.ERAMEnable && cart.ERAMSize != 0 {
+		if cart.ERAMSize != 0 {
 			//ERAM sizes 8kb and lower don't have any banking
 			if cart.bankMode == 0 || cart.ERAMSize <= 0x02 {
 				//ERAM Bank 0
@@ -269,27 +280,38 @@ func (cart *cartridge) readERAM(addr uint16) uint8 {
 			}
 		}
 	} else if cart.MBC == 2 {
-		//MBC2 has 0x800 bits of built in ERAM
-		readByte = cart.ERAM[(addr-0xA000)%800]
+		//MBC2 has 0x200 bits of built in SRAM so allow for wrap-around
+		//Interestingly enough, this SRAM is only capable of storing 4 bits of data
+		readByte = cart.ERAM[(addr-0xA000)&0x1FF]
 	}
 
 	return readByte
 }
 
 func (cart *cartridge) writeERAM(addr uint16, data uint8) {
+	if !cart.ERAMEnable {
+		return 
+	}
+	
 	if cart.MBC == 1 || cart.MBC == 3 {
 		if cart.ERAMEnable && cart.ERAMSize != 0 {
 			//ERAM sizes 8kb and lower don't have any banking
 			if cart.bankMode == 0 || cart.ERAMSize <= 0x02 {
 				//ERAM Bank 0
-				//TODO: Use modulus to account for 2kb rom banks
-				cart.ERAM[addr-0xA000] = data
+				if cart.ERAMSize == 0x1 {
+					cart.ERAM[(addr-0xA000)%0x500] = data
+				} else {
+					cart.ERAM[addr-0xA000] = data
+				}
 			} else {
 				//ERAM Banks 0-4
 				cart.ERAM[(cart.special2Bit*0x2000)+(int(addr)-0xA000)] = data
 			}
 		}
 	} else if cart.MBC == 2 {
-		cart.ERAM[(addr-0xA000)%0x800] = data
+		//MBC2 has 0x200 bits of built in SRAM so allow for wrap-around
+		//Interestingly enough, this SRAM is only capable of storing 4 bits of data
+		//(unused bits are stored as 1)
+		cart.ERAM[(addr-0xA000)&0x1FF] = 0xF0 | (data & 0xF)
 	}
 }

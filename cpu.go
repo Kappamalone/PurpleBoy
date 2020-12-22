@@ -188,8 +188,6 @@ func (cpu *gameboyCPU) addCycles(opcode uint8) {
 }
 
 func (cpu *gameboyCPU) decodeAndExecute(opcode uint8) {
-	//TODO: make sure instruction timings for branch instructions are correct by
-	//Referencing the opcode table
 	if opcode == 0x00 {
 		//NOP
 

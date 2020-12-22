@@ -135,7 +135,6 @@ func initSDLDebugging() (*sdl.Window, *sdl.Renderer) {
 }
 
 func (ppu *PPU) tick() {
-	//TODO: proper cpu privileges when accessing data
 	switch ppu.mode {
 	//Request LCDSTAT interrupts if corresponding bit set in LCDSTAT
 	case OAMSearch:
@@ -214,18 +213,19 @@ func (ppu *PPU) drawBG() {
 		return
 	}
 	usingWindow := false
-	windowX := uint8(0)
-	if ppu.WX == 7 { //Ugly fix
-		windowX = 1
-	} else if ppu.WX <= 6 {
-		windowX = 6 - ppu.WX
-	} else {
-		windowX = ppu.WX - 7
-	}
 
 	if bitSet(ppu.LCDC, 5) && ppu.WY <= ppu.LY {
 		//For future reference: We check the line to see if it has entered the window region, since ppu.WY is usually fixed (i think)
 		usingWindow = true
+	}
+
+	windowX := uint8(0)
+	if ppu.WX == 7 { //TODO: Find better way to get WX
+		windowX = 0
+	} else if ppu.WX <= 6 {
+		windowX = 6 - ppu.WX
+	} else {
+		windowX = ppu.WX - 7
 	}
 
 	tileMap := 0x1800               //Both BG and window use 0x1800 as the default map
@@ -291,7 +291,6 @@ func (ppu *PPU) drawSprites() {
 
 	sprites := [][]uint8{}
 	for i := 0; i < 0xA0; i += 4 {
-		//TODO: Fix x <= 8 and y <= 16
 		if len(sprites) <= 10 {
 			spriteSize := uint8(8)
 			if bitSet(ppu.LCDC, 2) {
@@ -314,7 +313,7 @@ func (ppu *PPU) drawSprites() {
 		tileNum := sprites[i][2]
 		attrs := sprites[i][3]
 
-		//spriteSize := sprites[i][4]
+		spriteSize := uint16(sprites[i][4])
 		spritePalSelect := bitSet(attrs, 4)
 		xflip := bitSet(attrs, 5)
 		yflip := bitSet(attrs, 6)
@@ -322,7 +321,7 @@ func (ppu *PPU) drawSprites() {
 
 		row := uint16(ppu.LY - y)
 		if yflip {
-			//TODO: Y flip
+			row = spriteSize - row - 1 //If y flip, then y=0 becomes y=8/16 depending on sprite size and so on
 		}
 
 		byte1 := ppu.VRAM[(uint16(tileNum)*16)+(row*2)]

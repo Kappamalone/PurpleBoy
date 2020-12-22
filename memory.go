@@ -52,7 +52,6 @@ func (mmu *memory) executeDMA(data uint8) {
 
 func (mmu *memory) writebyte(addr uint16, data uint8) {
 	//Implements the memory map from the pandocs
-	//TODO: make sure to return ppu mode for 0xFF41
 	if inRange(addr, 0x0000, 0x7FFF) {
 		//16KB ROM Bank 00
 		mmu.cart.writeCartridge(addr, data)
