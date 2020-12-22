@@ -63,7 +63,7 @@ All of the resources below were extremely helpful during development of the emul
 ## Credits
 - [wheremyfoodat](https://github.com/wheremyfoodat): An invaluable (and very patient) mentor to me throughout development and personally
 helped locate pesky bugs
-- The wonderful folk over at the r/emudev discord server :D
+- The wonderful folks over at the r/emudev discord server :D
 
 
 
