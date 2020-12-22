@@ -3,6 +3,12 @@ A Gameboy emulator written in Golang to further my understanding of emulation de
 WIP, but with the exception of sound and some MBC's, most games run fine. 
 Since this was a learning project, the emulator is not cycle-accurate nor fast.
 
+## Features
+* Passable emulation of most titles
+* Supports MBC1, MBC2 and MBC3 ROM mappers
+* Some debug output and logging capabilities are available
+* Has controller support
+ 
 ## Screenshots
 
 Title | In-game
