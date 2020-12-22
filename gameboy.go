@@ -20,7 +20,7 @@ var (
 	isLogging   bool = false
 	useTestRom  bool = false
 
-	title   string = "Pokemon Red"
+	title   string = "LoZ Link's Awakening"
 	testrom string = "roms/testroms/cpu_instrs/instr_timing.gb"
 	gamerom string = fmt.Sprintf("roms/gameroms/%s.gb", title)
 	inputROM string
