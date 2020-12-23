@@ -5,7 +5,7 @@ Since this was a learning project, the emulator is not cycle-accurate nor fast.
 
 ## Features
 * Passable emulation of most titles
-* Supports MBC1, MBC2 and MBC3 ROM mappers
+* Supports MBC1, MBC2 and MBC3 ROM mappers as well as Battery Buffered RAM
 * Some debug output and logging capabilities are available
 * Has controller support
  
@@ -61,8 +61,8 @@ All of the resources below were extremely helpful during development of the emul
 - https://github.com/mattrberry/CryBoy
 
 ## Credits
-- [wheremyfoodat](https://github.com/wheremyfoodat): An invaluable (and very patient) mentor to me throughout development and also
-helped locate numerous pesky bugs
+- [wheremyfoodat](https://github.com/wheremyfoodat): An invaluable (and very patient) mentor to me throughout development. Helped me locate and 
+fix numerous pesky bugs.
 - The wonderful folks over at the r/emudev discord server :D
 
 
